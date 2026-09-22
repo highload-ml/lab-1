@@ -47,3 +47,21 @@ jacocoTestReport {
 		html.required = true
 	}
 }
+
+jacocoTestCoverageVerification {
+	dependsOn test
+
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.70
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn jacocoTestCoverageVerification
+}
