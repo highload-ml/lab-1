@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: highload-ml
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lab1}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yml
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  pagination:
+    max-page-size: ${MAX_PAGE_SIZE:50}
