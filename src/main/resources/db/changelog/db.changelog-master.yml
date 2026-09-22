@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - includeAll:
+      path: db/changelog/project
+  - includeAll:
+      path: db/changelog/tracking
+  - includeAll:
+      path: db/changelog/registry
