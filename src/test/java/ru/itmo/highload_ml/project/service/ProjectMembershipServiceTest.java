@@ -66,7 +66,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberCreatesMembership() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.saveAndFlush(any(ProjectMembership.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -90,7 +90,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberRejectsUnknownUser() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findById(alice.getId())).thenReturn(Optional.empty());
+        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> membershipService.addMember(
                 project.getId(), new AddMemberRequest(alice.getId(), ProjectRole.EDITOR)))
@@ -100,7 +100,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberRejectsDuplicate() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.existsById(new ProjectMembershipId(project.getId(), alice.getId()))).thenReturn(true);
 
         assertThatThrownBy(() -> membershipService.addMember(
@@ -112,7 +112,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberTranslatesConcurrentDuplicateToConflict() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.saveAndFlush(any(ProjectMembership.class)))
                 .thenThrow(new DataIntegrityViolationException("pk"));
 

@@ -40,7 +40,8 @@ public class ProjectMembershipService {
     public MemberResponse addMember(UUID projectId, AddMemberRequest request) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
-        User user = userRepository.findById(request.userId())
+        // UserService.delete takes the same lock before checking memberships.
+        User user = userRepository.findByIdForUpdate(request.userId())
                 .orElseThrow(() -> new UserNotFoundException(request.userId()));
         if (membershipRepository.existsById(new ProjectMembershipId(projectId, user.getId()))) {
             throw new MembershipAlreadyExistsException(projectId, user.getId());

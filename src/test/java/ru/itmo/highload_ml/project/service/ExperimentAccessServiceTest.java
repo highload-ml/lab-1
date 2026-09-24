@@ -46,7 +46,7 @@ class ExperimentAccessServiceTest {
     void getProjectIdReturnsOwningProject() {
         UUID id = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
-        when(experimentRepository.findProjectIdById(id)).thenReturn(Optional.of(projectId));
+        when(experimentRepository.findProjectIdByExperimentId(id)).thenReturn(Optional.of(projectId));
 
         assertThat(experimentAccessService.getProjectId(id)).isEqualTo(projectId);
     }
@@ -54,7 +54,7 @@ class ExperimentAccessServiceTest {
     @Test
     void getProjectIdThrowsNotFoundForUnknownExperiment() {
         UUID id = UUID.randomUUID();
-        when(experimentRepository.findProjectIdById(id)).thenReturn(Optional.empty());
+        when(experimentRepository.findProjectIdByExperimentId(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> experimentAccessService.getProjectId(id))
                 .isInstanceOf(ExperimentNotFoundException.class);

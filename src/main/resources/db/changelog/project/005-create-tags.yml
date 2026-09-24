@@ -1,55 +1,27 @@
 databaseChangeLog:
   - changeSet:
-      id: 005-create-experiments
-      author: developer-1
+      id: 005-create-tags
+      author: developer-2
       changes:
         - createTable:
-            tableName: experiments
+            tableName: tags
             columns:
               - column:
                   name: id
                   type: UUID
                   constraints:
                     primaryKey: true
-                    primaryKeyName: pk_experiments
-                    nullable: false
-              - column:
-                  name: project_id
-                  type: UUID
-                  constraints:
+                    primaryKeyName: pk_tags
                     nullable: false
               - column:
                   name: name
                   type: VARCHAR(100)
                   constraints:
                     nullable: false
-              - column:
-                  name: description
-                  type: VARCHAR(1000)
-              - column:
-                  name: created_at
-                  type: TIMESTAMPTZ
-                  constraints:
-                    nullable: false
-        # experiment names are unique within a project; the index also serves lookups by project_id
         - addUniqueConstraint:
-            tableName: experiments
-            columnNames: project_id, name
-            constraintName: uk_experiments_project_name
-        - addForeignKeyConstraint:
-            baseTableName: experiments
-            baseColumnNames: project_id
-            referencedTableName: projects
-            referencedColumnNames: id
-            constraintName: fk_experiments_project
-            onDelete: CASCADE
-      rollback:
-        - dropTable:
-            tableName: experiments
-  - changeSet:
-      id: 005-create-experiment-tags
-      author: developer-1
-      changes:
+            tableName: tags
+            columnNames: name
+            constraintName: uk_tags_name
         - createTable:
             tableName: experiment_tags
             columns:
@@ -90,3 +62,5 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: experiment_tags
+        - dropTable:
+            tableName: tags

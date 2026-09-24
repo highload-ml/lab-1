@@ -3,19 +3,17 @@ package ru.itmo.highload_ml.project.port;
 import java.util.UUID;
 
 /**
- * Public contract of the project module for experiments, used by the tracking module to attach runs.
- * Like {@link ProjectAccessPort}, callers see only UUIDs, never the Experiment entity or its repository.
+ * Public project-module contract for tracking and registry. Other modules use UUIDs,
+ * not project JPA entities or repositories; this boundary can become a remote client later.
  */
 public interface ExperimentAccessPort {
 
-    /**
-     * @throws ru.itmo.highload_ml.project.exception.ExperimentNotFoundException if the experiment does not exist (404)
-     */
+    /** @throws ru.itmo.highload_ml.project.exception.ExperimentNotFoundException if absent (404) */
     void requireExists(UUID experimentId);
 
     /**
-     * @return id of the project the experiment belongs to
-     * @throws ru.itmo.highload_ml.project.exception.ExperimentNotFoundException if the experiment does not exist (404)
+     * @return owning project id
+     * @throws ru.itmo.highload_ml.project.exception.ExperimentNotFoundException if absent (404)
      */
     UUID getProjectId(UUID experimentId);
 }

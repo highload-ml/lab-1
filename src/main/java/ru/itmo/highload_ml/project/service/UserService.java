@@ -81,14 +81,13 @@ public class UserService {
 
     @Transactional
     public void delete(UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(id);
-        }
-        // explicit check instead of relying on the FK: gives 409 with a clear message, and keeps project owners intact
+        // All membership inserts lock this row too, so the check and delete cannot race with an add.
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
         if (membershipRepository.existsByIdUserId(id)) {
             throw new UserHasMembershipsException(id);
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
     }
 
     private User findUser(UUID id) {

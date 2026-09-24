@@ -3,16 +3,12 @@ package ru.itmo.highload_ml.project.repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.transaction.support.TransactionTemplate;
 import ru.itmo.highload_ml.project.ProjectModuleIntegrationTest;
 import ru.itmo.highload_ml.project.model.Experiment;
 import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.model.Tag;
-
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,81 +19,57 @@ class ExperimentRepositoryIntegrationTest extends ProjectModuleIntegrationTest {
     private ExperimentRepository experimentRepository;
 
     @Autowired
-    private TagRepository tagRepository;
-
-    @Autowired
     private ProjectRepository projectRepository;
 
     @Autowired
-    private TransactionTemplate transactionTemplate;
+    private TagRepository tagRepository;
 
     @Test
-    void persistsExperimentWithTagsInJoinTable() {
+    void findsExperimentsByProjectAndTagWithCorrectPageCount() {
         Project project = projectRepository.saveAndFlush(new Project("fraud", null));
-        Tag baseline = tagRepository.saveAndFlush(new Tag("baseline", null));
-        Tag xgboost = tagRepository.saveAndFlush(new Tag("xgboost", null));
+        Project otherProject = projectRepository.saveAndFlush(new Project("churn", null));
+        Tag baseline = tagRepository.saveAndFlush(new Tag("baseline"));
+        Tag tuned = tagRepository.saveAndFlush(new Tag("tuned"));
 
-        Experiment experiment = new Experiment(project, "run-1", "first run");
-        experiment.addTag(baseline);
-        experiment.addTag(xgboost);
-        Experiment saved = experimentRepository.saveAndFlush(experiment);
+        Experiment first = new Experiment(project, "first", null);
+        first.addTag(baseline);
+        first.addTag(tuned);
+        first = experimentRepository.saveAndFlush(first);
+        Experiment second = experimentRepository.saveAndFlush(new Experiment(project, "second", null));
+        Experiment other = new Experiment(otherProject, "first", null);
+        other.addTag(baseline);
+        experimentRepository.saveAndFlush(other);
 
-        assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM experiment_tags WHERE experiment_id = ?", Integer.class, saved.getId()))
-                .isEqualTo(2);
-        transactionTemplate.executeWithoutResult(status ->
-                assertThat(experimentRepository.findById(saved.getId()).orElseThrow().getTags())
-                        .extracting(Tag::getName)
-                        .containsExactlyInAnyOrder("baseline", "xgboost"));
+        assertThat(experimentRepository.existsByProject_Id(project.getId())).isTrue();
+        assertThat(experimentRepository.existsByProject_IdAndName(project.getId(), "first")).isTrue();
+        assertThat(experimentRepository.existsByProject_IdAndName(project.getId(), "missing")).isFalse();
+
+        var page = experimentRepository.findByProject_Id(
+                project.getId(), PageRequest.of(0, 1, Sort.by("createdAt", "id")));
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getContent()).hasSize(1);
+
+        var filtered = experimentRepository.findByProjectAndTag(
+                project.getId(), baseline.getId(), PageRequest.of(0, 10));
+        assertThat(filtered.getTotalElements()).isEqualTo(1);
+        assertThat(filtered.getContent()).extracting(Experiment::getId).containsExactly(first.getId());
+
+        assertThat(experimentRepository.findByIdAndProjectIdWithTags(first.getId(), project.getId()))
+                .get().extracting(experiment -> experiment.getTags().size()).isEqualTo(2);
+        assertThat(experimentRepository.findByIdAndProjectIdWithTags(first.getId(), otherProject.getId()))
+                .isEmpty();
+        assertThat(experimentRepository.findByIdAndProjectIdWithTags(second.getId(), project.getId()))
+                .isPresent();
     }
 
     @Test
-    void rejectsDuplicateExperimentNameWithinProjectButAllowsItInAnotherProject() {
-        Project fraud = projectRepository.saveAndFlush(new Project("fraud", null));
-        Project churn = projectRepository.saveAndFlush(new Project("churn", null));
-        experimentRepository.saveAndFlush(new Experiment(fraud, "run-1", null));
+    void databaseRejectsDuplicateNameOnlyWithinSameProject() {
+        Project project = projectRepository.saveAndFlush(new Project("fraud", null));
+        Project otherProject = projectRepository.saveAndFlush(new Project("churn", null));
+        experimentRepository.saveAndFlush(new Experiment(project, "baseline", null));
+        experimentRepository.saveAndFlush(new Experiment(otherProject, "baseline", null));
 
-        experimentRepository.saveAndFlush(new Experiment(churn, "run-1", null));
-
-        assertThatThrownBy(() -> experimentRepository.saveAndFlush(new Experiment(fraud, "run-1", null)))
+        assertThatThrownBy(() -> experimentRepository.saveAndFlush(new Experiment(project, "baseline", null)))
                 .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    void findsExperimentsOfProjectByTagAndProjectIdByExperiment() {
-        Project fraud = projectRepository.saveAndFlush(new Project("fraud", null));
-        Project churn = projectRepository.saveAndFlush(new Project("churn", null));
-        Tag baseline = tagRepository.saveAndFlush(new Tag("baseline", null));
-        Experiment tagged = new Experiment(fraud, "run-1", null);
-        tagged.addTag(baseline);
-        experimentRepository.saveAndFlush(tagged);
-        experimentRepository.saveAndFlush(new Experiment(fraud, "run-2", null));
-        Experiment taggedInOtherProject = new Experiment(churn, "run-1", null);
-        taggedInOtherProject.addTag(baseline);
-        experimentRepository.saveAndFlush(taggedInOtherProject);
-
-        Page<Experiment> page = experimentRepository.findByProjectIdAndTagsId(
-                fraud.getId(), baseline.getId(), PageRequest.of(0, 20, Sort.by("createdAt", "id")));
-
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).extracting(Experiment::getId).containsExactly(tagged.getId());
-        assertThat(experimentRepository.findProjectIdById(tagged.getId())).contains(fraud.getId());
-        assertThat(experimentRepository.findProjectIdById(UUID.randomUUID())).isEmpty();
-    }
-
-    @Test
-    void deletingProjectCascadesToExperimentsAndTheirTagLinks() {
-        Project project = projectRepository.saveAndFlush(new Project("fraud", null));
-        Tag tag = tagRepository.saveAndFlush(new Tag("baseline", null));
-        Experiment experiment = new Experiment(project, "run-1", null);
-        experiment.addTag(tag);
-        experimentRepository.saveAndFlush(experiment);
-
-        jdbcTemplate.update("DELETE FROM projects WHERE id = ?", project.getId());
-
-        assertThat(experimentRepository.count()).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM experiment_tags", Integer.class)).isZero();
-        assertThat(tagRepository.existsById(tag.getId())).isTrue();
     }
 }

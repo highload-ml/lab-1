@@ -6,8 +6,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import ru.itmo.highload_ml.BaseIntegrationTest;
 
 /**
- * Integration tests of the project module share one database; truncating all module tables together
- * keeps foreign keys between users, projects, memberships, experiments and tags from breaking cleanup order.
+ * Integration tests of the project module share one database; all related tables must be listed
+ * in one TRUNCATE statement because PostgreSQL checks foreign keys even when child tables are empty.
  */
 public abstract class ProjectModuleIntegrationTest extends BaseIntegrationTest {
 

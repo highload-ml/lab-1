@@ -11,5 +11,5 @@ public record ExperimentResponse(
         String description,
         Instant createdAt,
         List<TagResponse> tags
-) {
-}
+) {}
+

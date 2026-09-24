@@ -25,7 +25,7 @@ public class ExperimentAccessService implements ExperimentAccessPort {
 
     @Override
     public UUID getProjectId(UUID experimentId) {
-        return experimentRepository.findProjectIdById(experimentId)
+        return experimentRepository.findProjectIdByExperimentId(experimentId)
                 .orElseThrow(() -> new ExperimentNotFoundException(experimentId));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.itmo.highload_ml.project.ProjectModuleIntegrationTest;
 import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.model.ProjectMembership;
+import ru.itmo.highload_ml.project.model.ProjectMembershipId;
 import ru.itmo.highload_ml.project.model.ProjectRole;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
@@ -47,36 +48,68 @@ class ProjectControllerIntegrationTest extends ProjectModuleIntegrationTest {
 
     @Test
     void createReturns201WithLocation() throws Exception {
-        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
-                        .content(projectJson("fraud", "Fraud models")))
+        User owner = createOwner();
+        String location = mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
+                        .content(createProjectJson("fraud", "Fraud models", owner.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", matchesPattern(".*/api/v1/projects/[0-9a-f-]{36}$")))
                 .andExpect(jsonPath("$.name").value("fraud"))
                 .andExpect(jsonPath("$.description").value("Fraud models"))
-                .andExpect(jsonPath("$.createdAt").exists());
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andReturn().getResponse().getHeader("Location");
+
+        assertThat(location).isNotNull();
+        UUID projectId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
+        ProjectMembership membership = membershipRepository.findById(new ProjectMembershipId(projectId, owner.getId()))
+                .orElseThrow();
+        assertThat(membership.getRole()).isEqualTo(ProjectRole.OWNER);
+        assertThat(membershipRepository.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER)).isEqualTo(1);
     }
 
     @Test
     void createWithDuplicateNameReturns409() throws Exception {
         createProject("fraud");
+        User owner = createOwner();
 
-        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON).content(projectJson("fraud", null)))
+        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
+                        .content(createProjectJson("fraud", null, owner.getId())))
                 .andExpect(status().isConflict());
+        assertThat(membershipRepository.existsByIdUserId(owner.getId())).isFalse();
     }
 
     @Test
     void createWithBlankNameReturns400() throws Exception {
-        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON).content(projectJson(" ", null)))
+        User owner = createOwner();
+        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
+                        .content(createProjectJson(" ", null, owner.getId())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validationErrors.name").exists());
     }
 
     @Test
     void createWithTooLongDescriptionReturns400() throws Exception {
+        User owner = createOwner();
         mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
-                        .content(projectJson("fraud", "x".repeat(1001))))
+                        .content(createProjectJson("fraud", "x".repeat(1001), owner.getId())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validationErrors.description").exists());
+    }
+
+    @Test
+    void createWithoutOwnerIdReturns400() throws Exception {
+        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
+                        .content(projectJson("fraud", null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.ownerId").exists());
+        assertThat(projectRepository.count()).isZero();
+    }
+
+    @Test
+    void createWithUnknownOwnerReturns404WithoutProject() throws Exception {
+        mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
+                        .content(createProjectJson("fraud", null, UUID.randomUUID())))
+                .andExpect(status().isNotFound());
+        assertThat(projectRepository.count()).isZero();
     }
 
     @Test
@@ -144,12 +177,27 @@ class ProjectControllerIntegrationTest extends ProjectModuleIntegrationTest {
     }
 
     private String createProject(String name) throws Exception {
+        User owner = createOwner();
         String location = mockMvc.perform(post(PROJECTS).contentType(MediaType.APPLICATION_JSON)
-                        .content(projectJson(name, null)))
+                        .content(createProjectJson(name, null, owner.getId())))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getHeader("Location");
         assertThat(location).isNotNull();
         return location;
+    }
+
+    private User createOwner() {
+        return userRepository.save(new User("owner-" + UUID.randomUUID(), "hash", UserRole.ML_ENGINEER));
+    }
+
+    private static String createProjectJson(String name, String description, UUID ownerId) {
+        return description == null
+                ? """
+                {"name": "%s", "ownerId": "%s"}
+                """.formatted(name, ownerId)
+                : """
+                {"name": "%s", "description": "%s", "ownerId": "%s"}
+                """.formatted(name, description, ownerId);
     }
 
     private static String projectJson(String name, String description) {
