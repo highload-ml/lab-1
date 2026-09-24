@@ -12,6 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.http.HttpMethod;
+import ru.itmo.highload_ml.shared.exception.BusinessRuleViolationException;
+import ru.itmo.highload_ml.shared.exception.ConflictException;
+import ru.itmo.highload_ml.shared.exception.NotFoundException;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -78,6 +83,30 @@ class ApiExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDetail()).isEqualTo("An unexpected error occurred");
         assertThat(response.getBody().getDetail()).doesNotContain("database password leaked");
+    }
+
+    @Test
+    void mapsDomainExceptionsToHttpStatuses() {
+        assertThat(handler.handleDomainException(new NotFoundException("missing"), request).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(handler.handleDomainException(new ConflictException("taken"), request).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        ResponseEntity<ProblemDetail> response =
+                handler.handleDomainException(new BusinessRuleViolationException("bad transition"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).isEqualTo("bad transition");
+        assertThat(response.getBody().getInstance()).hasToString("/api/test");
+    }
+
+    @Test
+    void keepsStatusOfSpringMvcErrorResponses() {
+        ResponseEntity<ProblemDetail> response = handler.handleUnexpectedException(
+                new NoResourceFoundException(HttpMethod.GET, "/missing", "missing"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @SuppressWarnings("unchecked")
