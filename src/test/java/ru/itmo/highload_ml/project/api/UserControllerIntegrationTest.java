@@ -1,12 +1,11 @@
 package ru.itmo.highload_ml.project.api;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.itmo.highload_ml.BaseIntegrationTest;
+import ru.itmo.highload_ml.project.ProjectModuleIntegrationTest;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
 import ru.itmo.highload_ml.project.repository.UserRepository;
@@ -25,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
-class UserControllerIntegrationTest extends BaseIntegrationTest {
+class UserControllerIntegrationTest extends ProjectModuleIntegrationTest {
 
     private static final String USERS = "/api/v1/users";
 
@@ -34,11 +33,6 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    @BeforeEach
-    void cleanUp() {
-        userRepository.deleteAll();
-    }
 
     @Test
     void createReturns201WithLocationAndHidesPassword() throws Exception {

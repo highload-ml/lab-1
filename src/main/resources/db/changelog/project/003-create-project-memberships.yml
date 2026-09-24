@@ -1,0 +1,60 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-project-memberships
+      author: developer-1
+      changes:
+        - createTable:
+            tableName: project_memberships
+            columns:
+              - column:
+                  name: project_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: joined_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: project_memberships
+            columnNames: project_id, user_id
+            constraintName: pk_project_memberships
+        - addForeignKeyConstraint:
+            baseTableName: project_memberships
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_project_memberships_project
+            onDelete: CASCADE
+        # RESTRICT: a user who still belongs to projects cannot be deleted silently
+        - addForeignKeyConstraint:
+            baseTableName: project_memberships
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_project_memberships_user
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: project_memberships
+            indexName: ix_project_memberships_user_id
+            columns:
+              - column:
+                  name: user_id
+        - sql:
+            sql: >
+              ALTER TABLE project_memberships ADD CONSTRAINT ck_project_memberships_role
+              CHECK (role IN ('OWNER', 'EDITOR', 'VIEWER'))
+      rollback:
+        - dropTable:
+            tableName: project_memberships

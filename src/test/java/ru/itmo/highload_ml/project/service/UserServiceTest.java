@@ -16,10 +16,12 @@ import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UserResponse;
 import ru.itmo.highload_ml.project.exception.NicknameAlreadyTakenException;
+import ru.itmo.highload_ml.project.exception.UserHasMembershipsException;
 import ru.itmo.highload_ml.project.exception.UserNotFoundException;
 import ru.itmo.highload_ml.project.mapper.UserMapper;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
+import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
 import ru.itmo.highload_ml.project.security.PasswordHasher;
 
@@ -43,6 +45,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordHasher passwordHasher;
+
+    @Mock
+    private ProjectMembershipRepository membershipRepository;
 
     @Spy
     private UserMapper userMapper = new UserMapper();
@@ -182,6 +187,16 @@ class UserServiceTest {
         userService.delete(id);
 
         verify(userRepository).deleteById(id);
+    }
+
+    @Test
+    void deleteRejectsUserWhoStillBelongsToProjects() {
+        UUID id = UUID.randomUUID();
+        when(userRepository.existsById(id)).thenReturn(true);
+        when(membershipRepository.existsByIdUserId(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> userService.delete(id)).isInstanceOf(UserHasMembershipsException.class);
+        verify(userRepository, never()).deleteById(any());
     }
 
     @Test
