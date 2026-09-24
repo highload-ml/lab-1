@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.project.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.exception.NotProjectMemberException;
@@ -13,15 +14,11 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ProjectAccessService implements ProjectAccessPort {
 
     private final ProjectRepository projectRepository;
     private final ProjectMembershipRepository membershipRepository;
-
-    public ProjectAccessService(ProjectRepository projectRepository, ProjectMembershipRepository membershipRepository) {
-        this.projectRepository = projectRepository;
-        this.membershipRepository = membershipRepository;
-    }
 
     @Override
     public void requireMember(UUID projectId, UUID userId) {

@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.project.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,24 +28,13 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ProjectMembershipService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final ProjectMapper projectMapper;
-
-    public ProjectMembershipService(
-            ProjectRepository projectRepository,
-            ProjectMembershipRepository membershipRepository,
-            UserRepository userRepository,
-            ProjectMapper projectMapper
-    ) {
-        this.projectRepository = projectRepository;
-        this.membershipRepository = membershipRepository;
-        this.userRepository = userRepository;
-        this.projectMapper = projectMapper;
-    }
 
     @Transactional
     public MemberResponse addMember(UUID projectId, AddMemberRequest request) {
