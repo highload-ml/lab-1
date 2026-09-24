@@ -9,6 +9,9 @@ import java.util.UUID;
  */
 public interface ProjectAccessPort {
 
+    /** @throws ru.itmo.highload_ml.project.exception.ProjectNotFoundException if absent (404) */
+    void requireExists(UUID projectId);
+
     /**
      * @throws ru.itmo.highload_ml.project.exception.ProjectNotFoundException   if the project does not exist (404)
      * @throws ru.itmo.highload_ml.project.exception.NotProjectMemberException if the user is not a member (422)

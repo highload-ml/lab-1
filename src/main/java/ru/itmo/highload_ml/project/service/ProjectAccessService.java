@@ -21,10 +21,15 @@ public class ProjectAccessService implements ProjectAccessPort {
     private final ProjectMembershipRepository membershipRepository;
 
     @Override
-    public void requireMember(UUID projectId, UUID userId) {
+    public void requireExists(UUID projectId) {
         if (!projectRepository.existsById(projectId)) {
             throw new ProjectNotFoundException(projectId);
         }
+    }
+
+    @Override
+    public void requireMember(UUID projectId, UUID userId) {
+        requireExists(projectId);
         if (!membershipRepository.existsById(new ProjectMembershipId(projectId, userId))) {
             throw new NotProjectMemberException(projectId, userId);
         }

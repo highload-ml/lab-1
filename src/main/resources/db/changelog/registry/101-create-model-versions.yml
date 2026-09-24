@@ -1,0 +1,123 @@
+databaseChangeLog:
+  - changeSet:
+      id: 101-create-model-versions
+      author: developer-2
+      changes:
+        - createTable:
+            tableName: registry_version_counters
+            columns:
+              - column:
+                  name: project_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_registry_version_counters
+                    nullable: false
+              - column:
+                  name: next_version
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: registry_version_counters
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_registry_version_counters_project
+            onDelete: CASCADE
+        - sql:
+            sql: >
+              ALTER TABLE registry_version_counters ADD CONSTRAINT ck_registry_next_version
+              CHECK (next_version > 0)
+        - createTable:
+            tableName: model_versions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_model_versions
+                    nullable: false
+              - column:
+                  name: project_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: artifact_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: state
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: promoted_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: model_versions
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_model_versions_project
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: model_versions
+            baseColumnNames: artifact_id
+            referencedTableName: artifacts
+            referencedColumnNames: id
+            constraintName: fk_model_versions_artifact
+            onDelete: RESTRICT
+        - addUniqueConstraint:
+            tableName: model_versions
+            columnNames: project_id, version
+            constraintName: uk_model_versions_project_version
+        - addUniqueConstraint:
+            tableName: model_versions
+            columnNames: artifact_id
+            constraintName: uk_model_versions_artifact
+        - createIndex:
+            tableName: model_versions
+            indexName: ix_model_versions_project_created_id
+            columns:
+              - column:
+                  name: project_id
+              - column:
+                  name: created_at
+              - column:
+                  name: id
+        - sql:
+            sql: >
+              ALTER TABLE model_versions ADD CONSTRAINT ck_model_versions_version
+              CHECK (version > 0)
+        - sql:
+            sql: >
+              ALTER TABLE model_versions ADD CONSTRAINT ck_model_versions_state
+              CHECK (state IN ('NEW', 'STAGING', 'PRODUCTION', 'ARCHIVED'))
+        - sql:
+            sql: >
+              ALTER TABLE model_versions ADD CONSTRAINT ck_model_versions_promoted_at
+              CHECK ((state IN ('NEW', 'STAGING') AND promoted_at IS NULL)
+                OR (state IN ('PRODUCTION', 'ARCHIVED') AND promoted_at IS NOT NULL))
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX uk_model_versions_one_production
+              ON model_versions (project_id) WHERE state = 'PRODUCTION'
+      rollback:
+        - dropTable:
+            tableName: model_versions
+        - dropTable:
+            tableName: registry_version_counters
