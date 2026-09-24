@@ -10,10 +10,15 @@ import ru.itmo.highload_ml.project.api.dto.ProjectResponse;
 import ru.itmo.highload_ml.project.api.dto.UpdateProjectRequest;
 import ru.itmo.highload_ml.project.exception.ProjectNameAlreadyTakenException;
 import ru.itmo.highload_ml.project.exception.ProjectNotFoundException;
+import ru.itmo.highload_ml.project.exception.UserNotFoundException;
 import ru.itmo.highload_ml.project.mapper.ProjectMapper;
 import ru.itmo.highload_ml.project.model.Project;
+import ru.itmo.highload_ml.project.model.ProjectMembership;
+import ru.itmo.highload_ml.project.model.ProjectRole;
+import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.ProjectRepository;
+import ru.itmo.highload_ml.project.repository.UserRepository;
 
 import java.util.UUID;
 
@@ -24,26 +29,33 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMembershipRepository membershipRepository;
     private final ProjectMapper projectMapper;
+    private final UserRepository userRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectMembershipRepository membershipRepository,
-            ProjectMapper projectMapper
-    ) {
+            ProjectMapper projectMapper,
+            UserRepository userRepository) {
         this.projectRepository = projectRepository;
         this.membershipRepository = membershipRepository;
         this.projectMapper = projectMapper;
+        this.userRepository = userRepository;
     }
 
     @Transactional
     public ProjectResponse create(CreateProjectRequest request) {
+        User owner = userRepository.findByIdForUpdate(request.ownerId())
+                .orElseThrow(() -> new UserNotFoundException(request.ownerId()));
+
         requireNameFree(request.name());
+        Project project;
         try {
-            return projectMapper.toResponse(
-                    projectRepository.saveAndFlush(new Project(request.name(), request.description())));
+            project = projectRepository.saveAndFlush(new Project(request.name(), request.description()));
         } catch (DataIntegrityViolationException e) {
             throw new ProjectNameAlreadyTakenException(request.name());
         }
+        membershipRepository.saveAndFlush(new ProjectMembership(project, owner, ProjectRole.OWNER));
+        return projectMapper.toResponse(project);
     }
 
     public ProjectResponse getById(UUID id) {
