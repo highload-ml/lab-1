@@ -1,0 +1,92 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-create-experiments
+      author: developer-1
+      changes:
+        - createTable:
+            tableName: experiments
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_experiments
+                    nullable: false
+              - column:
+                  name: project_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(1000)
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        # experiment names are unique within a project; the index also serves lookups by project_id
+        - addUniqueConstraint:
+            tableName: experiments
+            columnNames: project_id, name
+            constraintName: uk_experiments_project_name
+        - addForeignKeyConstraint:
+            baseTableName: experiments
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_experiments_project
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: experiments
+  - changeSet:
+      id: 005-create-experiment-tags
+      author: developer-1
+      changes:
+        - createTable:
+            tableName: experiment_tags
+            columns:
+              - column:
+                  name: experiment_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tag_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: experiment_tags
+            columnNames: experiment_id, tag_id
+            constraintName: pk_experiment_tags
+        - addForeignKeyConstraint:
+            baseTableName: experiment_tags
+            baseColumnNames: experiment_id
+            referencedTableName: experiments
+            referencedColumnNames: id
+            constraintName: fk_experiment_tags_experiment
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: experiment_tags
+            baseColumnNames: tag_id
+            referencedTableName: tags
+            referencedColumnNames: id
+            constraintName: fk_experiment_tags_tag
+            onDelete: CASCADE
+        - createIndex:
+            tableName: experiment_tags
+            indexName: ix_experiment_tags_tag_id
+            columns:
+              - column:
+                  name: tag_id
+      rollback:
+        - dropTable:
+            tableName: experiment_tags
