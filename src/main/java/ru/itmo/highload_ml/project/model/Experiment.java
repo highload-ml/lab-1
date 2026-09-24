@@ -1,6 +1,7 @@
 package ru.itmo.highload_ml.project.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -29,6 +30,7 @@ public class Experiment {
     private Instant createdAt;
 
     @ManyToMany
+    @BatchSize(size = 50)
     @JoinTable(
             name = "experiment_tags",
             joinColumns = @JoinColumn(name = "experiment_id"),

@@ -18,6 +18,7 @@ import ru.itmo.highload_ml.project.api.dto.ProjectResponse;
 import ru.itmo.highload_ml.project.api.dto.UpdateProjectRequest;
 import ru.itmo.highload_ml.project.exception.ProjectNameAlreadyTakenException;
 import ru.itmo.highload_ml.project.exception.ProjectNotFoundException;
+import ru.itmo.highload_ml.project.exception.ProjectHasExperimentsException;
 import ru.itmo.highload_ml.project.exception.UserNotFoundException;
 import ru.itmo.highload_ml.project.mapper.ProjectMapper;
 import ru.itmo.highload_ml.project.model.Project;
@@ -26,6 +27,7 @@ import ru.itmo.highload_ml.project.model.ProjectRole;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.ProjectRepository;
+import ru.itmo.highload_ml.project.repository.ExperimentRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
 
 import java.util.List;
@@ -54,6 +56,9 @@ class ProjectServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ExperimentRepository experimentRepository;
 
     @Spy
     private ProjectMapper projectMapper = new ProjectMapper();
@@ -190,7 +195,7 @@ class ProjectServiceTest {
     @Test
     void deleteRemovesMembershipsThenProject() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.existsById(id)).thenReturn(true);
+        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.of(project("fraud")));
 
         projectService.delete(id);
 
@@ -200,9 +205,20 @@ class ProjectServiceTest {
     }
 
     @Test
+    void deleteRejectsProjectWithExperiments() {
+        UUID id = UUID.randomUUID();
+        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.of(project("fraud")));
+        when(experimentRepository.existsByProject_Id(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> projectService.delete(id)).isInstanceOf(ProjectHasExperimentsException.class);
+        verify(membershipRepository, never()).deleteAllByProjectId(id);
+        verify(projectRepository, never()).deleteById(id);
+    }
+
+    @Test
     void deleteThrowsWhenMissing() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.existsById(id)).thenReturn(false);
+        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> projectService.delete(id)).isInstanceOf(ProjectNotFoundException.class);
         verify(membershipRepository, never()).deleteAllByProjectId(any());

@@ -1,9 +1,11 @@
 package ru.itmo.highload_ml.project.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.itmo.highload_ml.project.model.Experiment;
@@ -22,6 +24,10 @@ public interface ExperimentRepository extends JpaRepository<Experiment, UUID> {
     @EntityGraph(attributePaths = "tags")
     @Query("select e from Experiment e where e.id = :id and e.project.id = :projectId")
     Optional<Experiment> findByIdAndProjectIdWithTags(@Param("id") UUID id, @Param("projectId") UUID projectId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Experiment e where e.id = :id and e.project.id = :projectId")
+    Optional<Experiment> findByIdAndProjectIdForUpdate(@Param("id") UUID id, @Param("projectId") UUID projectId);
 
     @Query(
             value = """

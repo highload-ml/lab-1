@@ -111,6 +111,8 @@ public class ProjectController {
     @ApiResponse(responseCode = "204", description = "Project deleted")
     @ApiResponse(responseCode = "404", description = "Project not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "Project still has experiments",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         projectService.delete(id);
         return ResponseEntity.noContent().build();
