@@ -10,6 +10,7 @@ import ru.itmo.highload_ml.tracking.api.dto.CreateMetricRequest;
 import ru.itmo.highload_ml.tracking.api.dto.CreateMetricsRequest;
 import ru.itmo.highload_ml.tracking.api.dto.MetricResponse;
 import ru.itmo.highload_ml.tracking.exception.DuplicateMetricException;
+import ru.itmo.highload_ml.tracking.exception.MetricNotFoundException;
 import ru.itmo.highload_ml.tracking.exception.RunNotFoundException;
 import ru.itmo.highload_ml.tracking.exception.RunNotRunningException;
 import ru.itmo.highload_ml.tracking.mapper.MetricMapper;
@@ -53,10 +54,14 @@ public class MetricService {
     }
 
     public Page<MetricResponse> findAll(UUID runId, Pageable pageable) {
-        if (!runRepository.existsById(runId)) {
-            throw new RunNotFoundException(runId);
-        }
+        requireRun(runId);
         return metricRepository.findByRun_Id(runId, pageable).map(mapper::toResponse);
+    }
+
+    public MetricResponse getById(UUID runId, UUID metricId) {
+        requireRun(runId);
+        return mapper.toResponse(metricRepository.findByIdAndRun_Id(metricId, runId)
+                .orElseThrow(() -> new MetricNotFoundException(metricId)));
     }
 
     private List<MetricResponse> persistBatch(UUID runId, List<CreateMetricRequest> requests) {
@@ -93,6 +98,12 @@ public class MetricService {
             }
         }
         return false;
+    }
+
+    private void requireRun(UUID runId) {
+        if (!runRepository.existsById(runId)) {
+            throw new RunNotFoundException(runId);
+        }
     }
 
     private record MetricKey(String name, long step) {

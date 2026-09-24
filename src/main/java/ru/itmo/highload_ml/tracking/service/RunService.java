@@ -2,6 +2,8 @@ package ru.itmo.highload_ml.tracking.service;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.exception.ExperimentNotFoundException;
@@ -57,6 +59,14 @@ public class RunService {
     public RunResponse getById(UUID runId) {
         return mapper.toResponse(runRepository.findById(runId)
                 .orElseThrow(() -> new RunNotFoundException(runId)));
+    }
+
+    public Slice<RunResponse> findAll(UUID experimentId, RunCursor after, Pageable pageable) {
+        experimentAccessPort.requireExists(experimentId);
+        Slice<Run> runs = after == null
+                ? runRepository.findByExperimentIdOrderByCreatedAtDescIdDesc(experimentId, pageable)
+                : runRepository.findBeforeCursor(experimentId, after.createdAt(), after.id(), pageable);
+        return runs.map(mapper::toResponse);
     }
 
     /** The run row lock serializes this transition with other transitions and future metric/artifact writes. */

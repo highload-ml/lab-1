@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.api.dto.CreateExperimentRequest;
 import ru.itmo.highload_ml.project.api.dto.ExperimentResponse;
 import ru.itmo.highload_ml.project.exception.ExperimentNameAlreadyTakenException;
+import ru.itmo.highload_ml.project.exception.ExperimentHasRunsException;
 import ru.itmo.highload_ml.project.exception.ExperimentNotFoundException;
 import ru.itmo.highload_ml.project.exception.ProjectNotFoundException;
 import ru.itmo.highload_ml.project.exception.TagNotFoundException;
@@ -27,6 +28,7 @@ import java.util.UUID;
 public class ExperimentService {
 
     private static final String UNIQUE_NAME_CONSTRAINT = "uk_experiments_project_name";
+    private static final String RUNS_FK_CONSTRAINT = "fk_runs_experiment";
 
     private final ProjectRepository projectRepository;
     private final ExperimentRepository experimentRepository;
@@ -111,8 +113,15 @@ public class ExperimentService {
     public void delete(UUID projectId, UUID experimentId) {
         lockProject(projectId);
         Experiment experiment = lockExperiment(projectId, experimentId);
-        experimentRepository.delete(experiment);
-        experimentRepository.flush();
+        try {
+            experimentRepository.delete(experiment);
+            experimentRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            if (hasConstraint(e, RUNS_FK_CONSTRAINT)) {
+                throw new ExperimentHasRunsException(experimentId);
+            }
+            throw e;
+        }
     }
 
     private void requireProject(UUID projectId) {
@@ -142,12 +151,19 @@ public class ExperimentService {
     }
 
     private RuntimeException translateNameConflict(DataIntegrityViolationException e, UUID projectId, String name) {
-        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && UNIQUE_NAME_CONSTRAINT.equals(violation.getConstraintName())) {
-                return new ExperimentNameAlreadyTakenException(projectId, name);
-            }
+        if (hasConstraint(e, UNIQUE_NAME_CONSTRAINT)) {
+            return new ExperimentNameAlreadyTakenException(projectId, name);
         }
         return e;
+    }
+
+    private static boolean hasConstraint(Throwable error, String constraintName) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation
+                    && constraintName.equals(violation.getConstraintName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

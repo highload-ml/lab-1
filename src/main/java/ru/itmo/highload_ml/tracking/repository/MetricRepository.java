@@ -5,11 +5,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import ru.itmo.highload_ml.tracking.model.Metric;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface MetricRepository extends JpaRepository<Metric, UUID> {
 
     boolean existsByRun_IdAndNameAndStep(UUID runId, String name, long step);
+
+    Optional<Metric> findByIdAndRun_Id(UUID metricId, UUID runId);
 
     Page<Metric> findByRun_Id(UUID runId, Pageable pageable);
 }

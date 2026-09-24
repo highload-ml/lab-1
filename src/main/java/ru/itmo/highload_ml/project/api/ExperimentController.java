@@ -132,6 +132,8 @@ public class ExperimentController {
     @ApiResponse(responseCode = "204", description = "Experiment deleted")
     @ApiResponse(responseCode = "404", description = "Project or experiment not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "Experiment has runs",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<Void> delete(@PathVariable UUID projectId, @PathVariable UUID experimentId) {
         experimentService.delete(projectId, experimentId);
         return ResponseEntity.noContent().build();
