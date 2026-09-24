@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 201-create-runs
+      author: developer-2
+      changes:
+        - createTable:
+            tableName: runs
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_runs
+                    nullable: false
+              - column:
+                  name: experiment_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: started_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: finished_at
+                  type: TIMESTAMPTZ
+        - addForeignKeyConstraint:
+            baseTableName: runs
+            baseColumnNames: experiment_id
+            referencedTableName: experiments
+            referencedColumnNames: id
+            constraintName: fk_runs_experiment
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: runs
+            indexName: ix_runs_experiment_created_id
+            columns:
+              - column:
+                  name: experiment_id
+              - column:
+                  name: created_at
+              - column:
+                  name: id
+        - sql:
+            sql: >
+              ALTER TABLE runs ADD CONSTRAINT ck_runs_status
+              CHECK (status IN ('CREATED', 'RUNNING', 'COMPLETED', 'FAILED'))
+        - sql:
+            sql: >
+              ALTER TABLE runs ADD CONSTRAINT ck_runs_status_timestamps
+              CHECK (
+                (status = 'CREATED' AND started_at IS NULL AND finished_at IS NULL)
+                OR (status = 'RUNNING' AND started_at IS NOT NULL AND finished_at IS NULL)
+                OR (status IN ('COMPLETED', 'FAILED') AND started_at IS NOT NULL
+                    AND finished_at IS NOT NULL AND finished_at >= started_at)
+              )
+      rollback:
+        - dropTable:
+            tableName: runs

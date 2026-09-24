@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 202-create-metrics
+      author: developer-2
+      changes:
+        - createTable:
+            tableName: metrics
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_metrics
+                    nullable: false
+              - column:
+                  name: run_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value
+                  type: NUMERIC(19,8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: step
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recorded_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: metrics
+            baseColumnNames: run_id
+            referencedTableName: runs
+            referencedColumnNames: id
+            constraintName: fk_metrics_run
+            onDelete: RESTRICT
+        - addUniqueConstraint:
+            tableName: metrics
+            columnNames: run_id, name, step
+            constraintName: uk_metrics_run_name_step
+        - createIndex:
+            tableName: metrics
+            indexName: ix_metrics_run_recorded_id
+            columns:
+              - column:
+                  name: run_id
+              - column:
+                  name: recorded_at
+              - column:
+                  name: id
+        - sql:
+            sql: >
+              ALTER TABLE metrics ADD CONSTRAINT ck_metrics_step_nonnegative
+              CHECK (step >= 0)
+      rollback:
+        - dropTable:
+            tableName: metrics
