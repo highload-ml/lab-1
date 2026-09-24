@@ -7,7 +7,7 @@ import ru.itmo.highload_ml.BaseIntegrationTest;
 
 /**
  * Integration tests of the project module share one database; truncating all module tables together
- * keeps foreign keys between users, projects and memberships from breaking cleanup order.
+ * keeps foreign keys between users, projects, memberships, experiments and tags from breaking cleanup order.
  */
 public abstract class ProjectModuleIntegrationTest extends BaseIntegrationTest {
 
@@ -16,6 +16,6 @@ public abstract class ProjectModuleIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void truncateProjectModuleTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE project_memberships, projects, users");
+        jdbcTemplate.execute("TRUNCATE TABLE experiment_tags, experiments, tags, project_memberships, projects, users");
     }
 }
