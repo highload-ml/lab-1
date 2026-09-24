@@ -3,37 +3,44 @@ package ru.itmo.highload_ml.project.model;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "projects")
-public class Project {
-
-    public static final int NAME_MAX_LENGTH = 100;
-    public static final int DESCRIPTION_MAX_LENGTH = 1000;
+@Table(name = "experiments")
+public class Experiment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "name", nullable = false, unique = true, length = NAME_MAX_LENGTH)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
+
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "description", length = DESCRIPTION_MAX_LENGTH)
+    @Column(name = "description", length = 1000)
     private String description;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @OneToMany(mappedBy = "project")
-    private List<Experiment> experiments = new ArrayList<>();
+    @ManyToMany
+    @JoinTable(
+            name = "experiment_tags",
+            joinColumns = @JoinColumn(name = "experiment_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 
-    protected Project() {
+    protected Experiment() {
     }
 
-    public Project(String name, String description) {
+    public Experiment(Project project, String name, String description) {
+        this.project = project;
         this.name = name;
         this.description = description;
     }
@@ -67,5 +74,21 @@ public class Project {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void addTag(Tag tag) {
+        tags.add(tag);
+    }
+
+    public void removeTag(Tag tag) {
+        tags.remove(tag);
+    }
+
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public UUID getProjectId() {
+        return project.getId();
     }
 }
