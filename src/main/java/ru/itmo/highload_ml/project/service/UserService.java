@@ -1,5 +1,7 @@
 package ru.itmo.highload_ml.project.service;
+import lombok.RequiredArgsConstructor;
 
+import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,7 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
@@ -30,20 +33,6 @@ public class UserService {
     private final PasswordHasher passwordHasher;
     private final TransactionOperations transactionOperations;
     private final ProjectMembershipRepository membershipRepository;
-
-    public UserService(
-            UserRepository userRepository,
-            UserMapper userMapper,
-            PasswordHasher passwordHasher,
-            TransactionOperations transactionOperations,
-            ProjectMembershipRepository membershipRepository
-    ) {
-        this.userRepository = userRepository;
-        this.userMapper = userMapper;
-        this.passwordHasher = passwordHasher;
-        this.transactionOperations = transactionOperations;
-        this.membershipRepository = membershipRepository;
-    }
 
     /**
      * PBKDF2 is deliberately slow (~100 ms), so the hash is computed before the transaction opens:
