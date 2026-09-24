@@ -1,9 +1,11 @@
 package ru.itmo.highload_ml.project;
 
 import org.springframework.test.util.ReflectionTestUtils;
+import ru.itmo.highload_ml.project.model.Experiment;
 import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.model.ProjectMembership;
 import ru.itmo.highload_ml.project.model.ProjectRole;
+import ru.itmo.highload_ml.project.model.Tag;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
 
@@ -31,5 +33,17 @@ public final class TestEntities {
 
     public static ProjectMembership membership(Project project, User user, ProjectRole role) {
         return new ProjectMembership(project, user, role);
+    }
+
+    public static Tag tag(String name) {
+        Tag tag = new Tag(name, null);
+        ReflectionTestUtils.setField(tag, "id", UUID.randomUUID());
+        return tag;
+    }
+
+    public static Experiment experiment(Project project, String name) {
+        Experiment experiment = new Experiment(project, name, null);
+        ReflectionTestUtils.setField(experiment, "id", UUID.randomUUID());
+        return experiment;
     }
 }
