@@ -22,38 +22,38 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
-import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
-import ru.itmo.highload_ml.project.api.dto.UserResponse;
-import ru.itmo.highload_ml.project.service.UserService;
+import ru.itmo.highload_ml.project.api.dto.CreateProjectRequest;
+import ru.itmo.highload_ml.project.api.dto.ProjectResponse;
+import ru.itmo.highload_ml.project.api.dto.UpdateProjectRequest;
+import ru.itmo.highload_ml.project.service.ProjectService;
 
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/users")
-@Tag(name = "Users", description = "Platform users and their global roles")
-public class UserController {
+@RequestMapping("/api/v1/projects")
+@Tag(name = "Projects", description = "ML projects")
+public class ProjectController {
 
-    private final UserService userService;
+    private final ProjectService projectService;
     private final Pagination pagination;
 
-    public UserController(UserService userService, Pagination pagination) {
-        this.userService = userService;
+    public ProjectController(ProjectService projectService, Pagination pagination) {
+        this.projectService = projectService;
         this.pagination = pagination;
     }
 
     @PostMapping
-    @Operation(summary = "Create user")
-    @ApiResponse(responseCode = "201", description = "User created",
-            headers = @Header(name = "Location", description = "URI of the created user"))
+    @Operation(summary = "Create project")
+    @ApiResponse(responseCode = "201", description = "Project created",
+            headers = @Header(name = "Location", description = "URI of the created project"))
     @ApiResponse(responseCode = "400", description = "Invalid request",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "409", description = "Nickname already taken",
+    @ApiResponse(responseCode = "409", description = "Project name already taken",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest request) {
-        UserResponse created = userService.create(request);
+    public ResponseEntity<ProjectResponse> create(@Valid @RequestBody CreateProjectRequest request) {
+        ProjectResponse created = projectService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.id())
@@ -62,55 +62,55 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get user by id")
-    @ApiResponse(responseCode = "200", description = "User found")
+    @Operation(summary = "Get project by id")
+    @ApiResponse(responseCode = "200", description = "Project found")
     @ApiResponse(responseCode = "400", description = "Malformed id",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "404", description = "User not found",
+    @ApiResponse(responseCode = "404", description = "Project not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public UserResponse getById(@PathVariable UUID id) {
-        return userService.getById(id);
+    public ProjectResponse getById(@PathVariable UUID id) {
+        return projectService.getById(id);
     }
 
     @GetMapping
-    @Operation(summary = "List users",
+    @Operation(summary = "List projects",
             description = "Classic pagination: page content in the body, total element count in the X-Total-Count header. "
                     + "Page size is capped by app.pagination.max-page-size (50).")
-    @ApiResponse(responseCode = "200", description = "Page of users",
-            headers = @Header(name = Pagination.TOTAL_COUNT_HEADER, description = "Total number of users",
+    @ApiResponse(responseCode = "200", description = "Page of projects",
+            headers = @Header(name = Pagination.TOTAL_COUNT_HEADER, description = "Total number of projects",
                     schema = @Schema(type = "integer")))
     @ApiResponse(responseCode = "400", description = "Invalid pagination parameters",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ResponseEntity<List<UserResponse>> findAll(
+    public ResponseEntity<List<ProjectResponse>> findAll(
             @Parameter(description = "Zero-based page index")
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @Parameter(description = "Page size, values above the limit are reduced to it")
             @RequestParam(defaultValue = "20") @Min(1) int size
     ) {
         return Pagination.withTotalCount(
-                userService.findAll(pagination.pageRequest(page, size, Sort.by("createdAt", "id"))));
+                projectService.findAll(pagination.pageRequest(page, size, Sort.by("createdAt", "id"))));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update user nickname and role")
-    @ApiResponse(responseCode = "200", description = "User updated")
+    @Operation(summary = "Update project name and description")
+    @ApiResponse(responseCode = "200", description = "Project updated")
     @ApiResponse(responseCode = "400", description = "Invalid request",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "404", description = "User not found",
+    @ApiResponse(responseCode = "404", description = "Project not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "409", description = "Nickname already taken",
+    @ApiResponse(responseCode = "409", description = "Project name already taken",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
-        return userService.update(id, request);
+    public ProjectResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateProjectRequest request) {
+        return projectService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete user")
-    @ApiResponse(responseCode = "204", description = "User deleted")
-    @ApiResponse(responseCode = "404", description = "User not found",
+    @Operation(summary = "Delete project with all its memberships")
+    @ApiResponse(responseCode = "204", description = "Project deleted")
+    @ApiResponse(responseCode = "404", description = "Project not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        userService.delete(id);
+        projectService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,29 +1,19 @@
 package ru.itmo.highload_ml.project.repository;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import ru.itmo.highload_ml.BaseIntegrationTest;
+import ru.itmo.highload_ml.project.ProjectModuleIntegrationTest;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class UserRepositoryIntegrationTest extends BaseIntegrationTest {
+class UserRepositoryIntegrationTest extends ProjectModuleIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    void cleanUp() {
-        userRepository.deleteAll();
-    }
 
     @Test
     void persistsUserWithGeneratedIdCreationTimeAndRoleAsString() {

@@ -11,9 +11,11 @@ import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UserResponse;
 import ru.itmo.highload_ml.project.exception.NicknameAlreadyTakenException;
+import ru.itmo.highload_ml.project.exception.UserHasMembershipsException;
 import ru.itmo.highload_ml.project.exception.UserNotFoundException;
 import ru.itmo.highload_ml.project.mapper.UserMapper;
 import ru.itmo.highload_ml.project.model.User;
+import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
 import ru.itmo.highload_ml.project.security.PasswordHasher;
 
@@ -27,17 +29,20 @@ public class UserService {
     private final UserMapper userMapper;
     private final PasswordHasher passwordHasher;
     private final TransactionOperations transactionOperations;
+    private final ProjectMembershipRepository membershipRepository;
 
     public UserService(
             UserRepository userRepository,
             UserMapper userMapper,
             PasswordHasher passwordHasher,
-            TransactionOperations transactionOperations
+            TransactionOperations transactionOperations,
+            ProjectMembershipRepository membershipRepository
     ) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.passwordHasher = passwordHasher;
         this.transactionOperations = transactionOperations;
+        this.membershipRepository = membershipRepository;
     }
 
     /**
@@ -89,6 +94,10 @@ public class UserService {
     public void delete(UUID id) {
         if (!userRepository.existsById(id)) {
             throw new UserNotFoundException(id);
+        }
+        // explicit check instead of relying on the FK: gives 409 with a clear message, and keeps project owners intact
+        if (membershipRepository.existsByIdUserId(id)) {
+            throw new UserHasMembershipsException(id);
         }
         userRepository.deleteById(id);
     }
