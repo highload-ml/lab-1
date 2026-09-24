@@ -1,10 +1,15 @@
 package ru.itmo.highload_ml.project.model;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "tags")
 public class Tag {
 
@@ -15,18 +20,7 @@ public class Tag {
     @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
 
-    protected Tag() {
-    }
-
     public Tag(String name) {
         this.name = name;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
     }
 }

@@ -11,6 +11,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 
@@ -18,6 +22,8 @@ import java.time.Instant;
  * Many-to-many link between Project and User carrying extra columns (role, joinedAt).
  */
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "project_memberships")
 public class ProjectMembership {
 
@@ -36,13 +42,11 @@ public class ProjectMembership {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 32)
+    @Setter
     private ProjectRole role;
 
     @Column(name = "joined_at", nullable = false, updatable = false)
     private Instant joinedAt;
-
-    protected ProjectMembership() {
-    }
 
     public ProjectMembership(Project project, User user, ProjectRole role) {
         this.id = new ProjectMembershipId(project.getId(), user.getId());
@@ -56,29 +60,5 @@ public class ProjectMembership {
         if (joinedAt == null) {
             joinedAt = Instant.now();
         }
-    }
-
-    public ProjectMembershipId getId() {
-        return id;
-    }
-
-    public Project getProject() {
-        return project;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public ProjectRole getRole() {
-        return role;
-    }
-
-    public void setRole(ProjectRole role) {
-        this.role = role;
-    }
-
-    public Instant getJoinedAt() {
-        return joinedAt;
     }
 }

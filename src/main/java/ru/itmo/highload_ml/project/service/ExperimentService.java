@@ -1,6 +1,7 @@
 package ru.itmo.highload_ml.project.service;
 
 import org.hibernate.exception.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ExperimentService {
 
     private static final String UNIQUE_NAME_CONSTRAINT = "uk_experiments_project_name";
@@ -32,14 +34,6 @@ public class ExperimentService {
     private final ExperimentRepository experimentRepository;
     private final TagRepository tagRepository;
     private final ExperimentMapper mapper;
-
-    public ExperimentService(ProjectRepository projectRepository, ExperimentRepository experimentRepository,
-                             TagRepository tagRepository, ExperimentMapper mapper) {
-        this.projectRepository = projectRepository;
-        this.experimentRepository = experimentRepository;
-        this.tagRepository = tagRepository;
-        this.mapper = mapper;
-    }
 
     /** The project lock serializes creates and renames and coordinates with project deletion. */
     @Transactional

@@ -1,6 +1,7 @@
 package ru.itmo.highload_ml.project.service;
 
 import org.hibernate.exception.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,15 +18,12 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class TagService {
 
     private static final String UNIQUE_NAME_CONSTRAINT = "uk_tags_name";
 
     private final TagRepository tagRepository;
-
-    public TagService(TagRepository tagRepository) {
-        this.tagRepository = tagRepository;
-    }
 
     @Transactional
     public TagResponse create(CreateTagRequest request) {

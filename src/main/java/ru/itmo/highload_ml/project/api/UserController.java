@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -33,16 +34,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
 @Tag(name = "Users", description = "Platform users and their global roles")
 public class UserController {
 
     private final UserService userService;
     private final Pagination pagination;
-
-    public UserController(UserService userService, Pagination pagination) {
-        this.userService = userService;
-        this.pagination = pagination;
-    }
 
     @PostMapping
     @Operation(summary = "Create user")

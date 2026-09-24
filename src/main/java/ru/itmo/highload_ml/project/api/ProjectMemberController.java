@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -33,16 +34,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/members")
+@RequiredArgsConstructor
 @Tag(name = "Project members", description = "Project membership with per-project roles")
 public class ProjectMemberController {
 
     private final ProjectMembershipService membershipService;
     private final Pagination pagination;
-
-    public ProjectMemberController(ProjectMembershipService membershipService, Pagination pagination) {
-        this.membershipService = membershipService;
-        this.pagination = pagination;
-    }
 
     @PostMapping
     @Operation(summary = "Add user to project")
