@@ -50,6 +50,8 @@ public class ProjectController {
             headers = @Header(name = "Location", description = "URI of the created project"))
     @ApiResponse(responseCode = "400", description = "Invalid request",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "404", description = "Owner not found",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "Project name already taken",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ProjectResponse> create(@Valid @RequestBody CreateProjectRequest request) {

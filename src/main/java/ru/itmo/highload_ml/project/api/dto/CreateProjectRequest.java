@@ -17,6 +17,7 @@ public record CreateProjectRequest(
         @Size(max = 1000)
         String description,
 
+        @Schema(description = "ID of the initial project owner")
         @NotNull UUID ownerId
 ) {
 }

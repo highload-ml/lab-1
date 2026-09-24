@@ -42,6 +42,10 @@ public class ProjectService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * The project and its initial OWNER membership must commit or roll back together.
+     * Locking the owner row also serializes this operation with user deletion.
+     */
     @Transactional
     public ProjectResponse create(CreateProjectRequest request) {
         User owner = userRepository.findByIdForUpdate(request.ownerId())
