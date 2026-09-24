@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Entity
@@ -52,7 +53,7 @@ public class Metric {
     @PrePersist
     void onCreate() {
         if (recordedAt == null) {
-            recordedAt = Instant.now();
+            recordedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         }
     }
 

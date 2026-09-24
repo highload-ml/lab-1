@@ -19,6 +19,7 @@ import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.repository.RunRepository;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
@@ -74,7 +75,7 @@ public class RunService {
     public RunResponse start(UUID runId) {
         Run run = lockRun(runId);
         requireStatus(run, RunStatus.CREATED, RunStatus.RUNNING);
-        run.setStartedAt(Instant.now());
+        run.setStartedAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
         run.setStatus(RunStatus.RUNNING);
         runRepository.flush();
         return mapper.toResponse(run);
@@ -93,7 +94,7 @@ public class RunService {
     private RunResponse finish(UUID runId, RunStatus target) {
         Run run = lockRun(runId);
         requireStatus(run, RunStatus.RUNNING, target);
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         // Keep the database invariant even if the system clock moves backwards between transitions.
         run.setFinishedAt(now.isBefore(run.getStartedAt()) ? run.getStartedAt() : now);
         run.setStatus(target);
