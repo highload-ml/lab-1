@@ -16,7 +16,7 @@ public abstract class ProjectModuleIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void truncateProjectModuleTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE metrics, artifacts, runs, experiment_tags, experiments, tags, "
-                + "project_memberships, projects, users");
+        jdbcTemplate.execute("TRUNCATE TABLE model_versions, registry_version_counters, metrics, artifacts, runs, "
+                + "experiment_tags, experiments, tags, project_memberships, projects, users");
     }
 }
