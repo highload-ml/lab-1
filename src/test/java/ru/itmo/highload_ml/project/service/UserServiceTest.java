@@ -182,29 +182,31 @@ class UserServiceTest {
     @Test
     void deleteRemovesExistingUser() {
         UUID id = UUID.randomUUID();
-        when(userRepository.existsById(id)).thenReturn(true);
+        User user = new User("alice", "hash", UserRole.ADMIN);
+        when(userRepository.findByIdForUpdate(id)).thenReturn(Optional.of(user));
 
         userService.delete(id);
 
-        verify(userRepository).deleteById(id);
+        verify(userRepository).delete(user);
     }
 
     @Test
     void deleteRejectsUserWhoStillBelongsToProjects() {
         UUID id = UUID.randomUUID();
-        when(userRepository.existsById(id)).thenReturn(true);
+        when(userRepository.findByIdForUpdate(id))
+                .thenReturn(Optional.of(new User("alice", "hash", UserRole.ADMIN)));
         when(membershipRepository.existsByIdUserId(id)).thenReturn(true);
 
         assertThatThrownBy(() -> userService.delete(id)).isInstanceOf(UserHasMembershipsException.class);
-        verify(userRepository, never()).deleteById(any());
+        verify(userRepository, never()).delete(any());
     }
 
     @Test
     void deleteThrowsWhenMissing() {
         UUID id = UUID.randomUUID();
-        when(userRepository.existsById(id)).thenReturn(false);
+        when(userRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.delete(id)).isInstanceOf(UserNotFoundException.class);
-        verify(userRepository, never()).deleteById(any());
+        verify(userRepository, never()).delete(any());
     }
 }
