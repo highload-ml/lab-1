@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -33,16 +34,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/projects")
+@RequiredArgsConstructor
 @Tag(name = "Projects", description = "ML projects")
 public class ProjectController {
 
     private final ProjectService projectService;
     private final Pagination pagination;
-
-    public ProjectController(ProjectService projectService, Pagination pagination) {
-        this.projectService = projectService;
-        this.pagination = pagination;
-    }
 
     @PostMapping
     @Operation(summary = "Create project")
