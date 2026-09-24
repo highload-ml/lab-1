@@ -22,7 +22,9 @@ class OpenApiEndpointTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.openapi").exists())
                 .andExpect(jsonPath("$.info.title").value("Experiment Tracking Platform API"))
-                .andExpect(jsonPath("$.info.version").value("v1"));
+                .andExpect(jsonPath("$.info.version").value("v1"))
+                .andExpect(jsonPath("$.paths['/api/v1/projects/{projectId}/experiments'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/tags'].post").exists());
     }
 
     @Test

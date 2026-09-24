@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.api.dto.CreateProjectRequest;
 import ru.itmo.highload_ml.project.api.dto.ProjectResponse;
 import ru.itmo.highload_ml.project.api.dto.UpdateProjectRequest;
+import ru.itmo.highload_ml.project.exception.ProjectHasExperimentsException;
 import ru.itmo.highload_ml.project.exception.ProjectNameAlreadyTakenException;
 import ru.itmo.highload_ml.project.exception.ProjectNotFoundException;
 import ru.itmo.highload_ml.project.exception.UserNotFoundException;
@@ -16,6 +17,7 @@ import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.model.ProjectMembership;
 import ru.itmo.highload_ml.project.model.ProjectRole;
 import ru.itmo.highload_ml.project.model.User;
+import ru.itmo.highload_ml.project.repository.ExperimentRepository;
 import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.ProjectRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
@@ -30,16 +32,19 @@ public class ProjectService {
     private final ProjectMembershipRepository membershipRepository;
     private final ProjectMapper projectMapper;
     private final UserRepository userRepository;
+    private final ExperimentRepository experimentRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectMembershipRepository membershipRepository,
             ProjectMapper projectMapper,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ExperimentRepository experimentRepository) {
         this.projectRepository = projectRepository;
         this.membershipRepository = membershipRepository;
         this.projectMapper = projectMapper;
         this.userRepository = userRepository;
+        this.experimentRepository = experimentRepository;
     }
 
     /**
@@ -87,13 +92,14 @@ public class ProjectService {
     }
 
     /**
-     * Memberships are removed in the same transaction as the project, so a project never disappears
-     * while its membership rows survive (the FK also cascades as a database-level safety net).
+     * Experiments prevent deletion. Otherwise memberships and the project are removed atomically;
+     * the membership FK also cascades as a database-level safety net.
      */
     @Transactional
     public void delete(UUID id) {
-        if (!projectRepository.existsById(id)) {
-            throw new ProjectNotFoundException(id);
+        projectRepository.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFoundException(id));
+        if (experimentRepository.existsByProject_Id(id)) {
+            throw new ProjectHasExperimentsException(id);
         }
         membershipRepository.deleteAllByProjectId(id);
         projectRepository.deleteById(id);
