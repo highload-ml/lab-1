@@ -15,6 +15,9 @@ import java.util.UUID;
 
 public interface ExperimentRepository extends JpaRepository<Experiment, UUID> {
 
+    @Query("select e.project.id from Experiment e where e.id = :experimentId")
+    Optional<UUID> findProjectIdByExperimentId(@Param("experimentId") UUID experimentId);
+
     boolean existsByProject_Id(UUID projectId);
 
     boolean existsByProject_IdAndName(UUID projectId, String name);
