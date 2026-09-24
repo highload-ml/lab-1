@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -32,16 +33,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/experiments")
+@RequiredArgsConstructor
 @Tag(name = "Experiments", description = "Experiments within a project")
 public class ExperimentController {
 
     private final ExperimentService experimentService;
     private final Pagination pagination;
-
-    public ExperimentController(ExperimentService experimentService, Pagination pagination) {
-        this.experimentService = experimentService;
-        this.pagination = pagination;
-    }
 
     @PostMapping
     @Operation(summary = "Create experiment in project")

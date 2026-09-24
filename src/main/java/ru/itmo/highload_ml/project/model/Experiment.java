@@ -1,6 +1,10 @@
 package ru.itmo.highload_ml.project.model;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
@@ -9,6 +13,8 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "experiments")
 public class Experiment {
 
@@ -16,13 +22,16 @@ public class Experiment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Getter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
+    @Setter
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Setter
     @Column(name = "description", length = 1000)
     private String description;
 
@@ -38,9 +47,6 @@ public class Experiment {
     )
     private Set<Tag> tags = new HashSet<>();
 
-    protected Experiment() {
-    }
-
     public Experiment(Project project, String name, String description) {
         this.project = project;
         this.name = name;
@@ -54,40 +60,12 @@ public class Experiment {
         }
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
     public void addTag(Tag tag) {
         tags.add(tag);
     }
 
     public void removeTag(Tag tag) {
         tags.remove(tag);
-    }
-
-    public Set<Tag> getTags() {
-        return tags;
     }
 
     public UUID getProjectId() {

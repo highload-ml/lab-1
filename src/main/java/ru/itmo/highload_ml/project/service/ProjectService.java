@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.project.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +27,7 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
@@ -33,19 +35,6 @@ public class ProjectService {
     private final ProjectMapper projectMapper;
     private final UserRepository userRepository;
     private final ExperimentRepository experimentRepository;
-
-    public ProjectService(
-            ProjectRepository projectRepository,
-            ProjectMembershipRepository membershipRepository,
-            ProjectMapper projectMapper,
-            UserRepository userRepository,
-            ExperimentRepository experimentRepository) {
-        this.projectRepository = projectRepository;
-        this.membershipRepository = membershipRepository;
-        this.projectMapper = projectMapper;
-        this.userRepository = userRepository;
-        this.experimentRepository = experimentRepository;
-    }
 
     /**
      * The project and its initial OWNER membership must commit or roll back together.

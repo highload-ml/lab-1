@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -30,16 +31,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/tags")
+@RequiredArgsConstructor
 @Tag(name = "Tags", description = "Global experiment tags")
 public class TagController {
 
     private final TagService tagService;
     private final Pagination pagination;
-
-    public TagController(TagService tagService, Pagination pagination) {
-        this.tagService = tagService;
-        this.pagination = pagination;
-    }
 
     @PostMapping
     @Operation(summary = "Create global tag")
