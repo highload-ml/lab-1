@@ -11,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.support.TransactionOperations;
 import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UserResponse;
@@ -45,6 +46,9 @@ class UserServiceTest {
 
     @Spy
     private UserMapper userMapper = new UserMapper();
+
+    @Spy
+    private TransactionOperations transactionOperations = TransactionOperations.withoutTransaction();
 
     @InjectMocks
     private UserService userService;

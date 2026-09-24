@@ -4,7 +4,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UserResponse;
@@ -24,24 +26,39 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordHasher passwordHasher;
+    private final TransactionOperations transactionOperations;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordHasher passwordHasher) {
+    public UserService(
+            UserRepository userRepository,
+            UserMapper userMapper,
+            PasswordHasher passwordHasher,
+            TransactionOperations transactionOperations
+    ) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.passwordHasher = passwordHasher;
+        this.transactionOperations = transactionOperations;
     }
 
-    @Transactional
+    /**
+     * PBKDF2 is deliberately slow (~100 ms), so the hash is computed before the transaction opens:
+     * otherwise every signup would hold a pooled DB connection idle for the whole hash,
+     * and a burst of signups could exhaust the pool for the entire application.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public UserResponse create(CreateUserRequest request) {
-        requireNicknameFree(request.nickname());
+        String passwordHash = passwordHasher.hash(request.password());
 
-        User user = new User(request.nickname(), passwordHasher.hash(request.password()), request.role());
-        try {
-            // flush inside the try: a concurrent insert of the same nickname surfaces here as 409, not 500
-            return userMapper.toResponse(userRepository.saveAndFlush(user));
-        } catch (DataIntegrityViolationException e) {
-            throw new NicknameAlreadyTakenException(request.nickname());
-        }
+        return transactionOperations.execute(status -> {
+            requireNicknameFree(request.nickname());
+            try {
+                // flush inside the try: a concurrent insert of the same nickname surfaces here as 409, not 500
+                return userMapper.toResponse(
+                        userRepository.saveAndFlush(new User(request.nickname(), passwordHash, request.role())));
+            } catch (DataIntegrityViolationException e) {
+                throw new NicknameAlreadyTakenException(request.nickname());
+            }
+        });
     }
 
     public UserResponse getById(UUID id) {

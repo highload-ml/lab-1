@@ -44,3 +44,16 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: users
+  - changeSet:
+      id: 001-index-users-created-at
+      author: developer-1
+      comment: supports GET /api/v1/users ordered by (created_at, id) without a full-table sort
+      changes:
+        - createIndex:
+            tableName: users
+            indexName: ix_users_created_at_id
+            columns:
+              - column:
+                  name: created_at
+              - column:
+                  name: id

@@ -59,4 +59,13 @@ class UserRepositoryIntegrationTest extends BaseIntegrationTest {
                         + "VALUES (gen_random_uuid(), 'mallory', 'hash', 'ROOT', now())"))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    void listOrderingIsBackedByIndex() {
+        Integer indexes = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE tablename = 'users' AND indexname = 'ix_users_created_at_id'",
+                Integer.class);
+
+        assertThat(indexes).isEqualTo(1);
+    }
 }
