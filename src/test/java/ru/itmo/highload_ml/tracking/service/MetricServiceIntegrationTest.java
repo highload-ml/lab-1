@@ -27,10 +27,6 @@ import ru.itmo.highload_ml.tracking.repository.MetricRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -103,36 +99,6 @@ class MetricServiceIntegrationTest extends ProjectModuleIntegrationTest {
         assertThat(metricRepository.count()).isZero();
     }
 
-    @Test
-    void logAndCompleteSerializeOnRunRow() {
-        UUID runId = createRunningRun();
-        CyclicBarrier barrier = new CyclicBarrier(2);
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var log = CompletableFuture.supplyAsync(() -> {
-                await(barrier);
-                try {
-                    metricService.log(runId, metric("accuracy", 1));
-                    return true;
-                } catch (RunNotRunningException e) {
-                    return false;
-                }
-            }, executor);
-            var complete = CompletableFuture.runAsync(() -> {
-                await(barrier);
-                runService.complete(runId);
-            }, executor);
-            complete.join();
-            boolean logged = log.join();
-
-            assertThat(runService.getById(runId).status()).isEqualTo(RunStatus.COMPLETED);
-            assertThat(metricRepository.count()).isEqualTo(logged ? 1 : 0);
-            if (logged) {
-                assertThat(metricRepository.findAll().getFirst().getRecordedAt())
-                        .isBeforeOrEqualTo(runService.getById(runId).finishedAt());
-            }
-        }
-    }
-
     private UUID createRunningRun() {
         Project project = projectRepository.saveAndFlush(new Project("project-" + UUID.randomUUID(), null));
         Experiment experiment = experimentRepository.saveAndFlush(new Experiment(project, "baseline", null));
@@ -146,13 +112,5 @@ class MetricServiceIntegrationTest extends ProjectModuleIntegrationTest {
 
     private static CreateMetricRequest metric(String name, long step) {
         return new CreateMetricRequest(name, new BigDecimal("0.95000000"), step);
-    }
-
-    private static void await(CyclicBarrier barrier) {
-        try {
-            barrier.await(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

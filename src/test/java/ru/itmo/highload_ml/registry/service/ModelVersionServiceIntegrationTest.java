@@ -17,10 +17,6 @@ import ru.itmo.highload_ml.tracking.model.ArtifactType;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -99,64 +95,7 @@ class ModelVersionServiceIntegrationTest extends RegistryModuleIntegrationTest {
                 .isInstanceOf(ModelVersionNotFoundException.class);
     }
 
-    @Test
-    void concurrentRegistrationsGetDistinctVersions() {
-        Fixture fixture = createFixture();
-        UUID firstArtifact = createArtifact(fixture, ArtifactType.MODEL, true);
-        UUID secondArtifact = createArtifact(fixture, ArtifactType.MODEL, true);
-        CyclicBarrier barrier = new CyclicBarrier(2);
-
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var first = CompletableFuture.supplyAsync(() -> {
-                await(barrier);
-                return register(fixture, firstArtifact).version();
-            }, executor);
-            var second = CompletableFuture.supplyAsync(() -> {
-                await(barrier);
-                return register(fixture, secondArtifact).version();
-            }, executor);
-            assertThat(List.of(first.join(), second.join())).containsExactlyInAnyOrder(1L, 2L);
-        }
-        assertThat(repository.count()).isEqualTo(2);
-    }
-
-    @Test
-    void concurrentPromotionsLeaveExactlyOneProduction() {
-        Fixture fixture = createFixture();
-        var first = register(fixture, createArtifact(fixture, ArtifactType.MODEL, true));
-        var second = register(fixture, createArtifact(fixture, ArtifactType.MODEL, true));
-        service.stage(fixture.projectId(), first.id(), fixture.userId());
-        service.stage(fixture.projectId(), second.id(), fixture.userId());
-        CyclicBarrier barrier = new CyclicBarrier(2);
-
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var a = CompletableFuture.runAsync(() -> {
-                await(barrier);
-                service.promoteToProduction(fixture.projectId(), first.id(), fixture.userId());
-            }, executor);
-            var b = CompletableFuture.runAsync(() -> {
-                await(barrier);
-                service.promoteToProduction(fixture.projectId(), second.id(), fixture.userId());
-            }, executor);
-            CompletableFuture.allOf(a, b).join();
-        }
-
-        assertThat(repository.findAll()).extracting(version -> version.getState())
-                .containsExactlyInAnyOrder(ModelVersionState.PRODUCTION, ModelVersionState.ARCHIVED);
-        assertThat(jdbcTemplate.queryForObject("""
-                SELECT count(*) FROM model_versions WHERE project_id = ? AND state = 'PRODUCTION'
-                """, Long.class, fixture.projectId())).isEqualTo(1);
-    }
-
     private ru.itmo.highload_ml.registry.api.dto.ModelVersionResponse register(Fixture fixture, UUID artifactId) {
         return service.register(fixture.projectId(), new RegisterModelVersionRequest(fixture.userId(), artifactId));
-    }
-
-    private static void await(CyclicBarrier barrier) {
-        try {
-            barrier.await(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

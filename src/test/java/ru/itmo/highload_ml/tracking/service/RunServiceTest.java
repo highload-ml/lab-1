@@ -100,7 +100,7 @@ class RunServiceTest {
     @Test
     void startChangesCreatedRunAndRejectsRepeatedStart() {
         Run run = run();
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
 
         var response = service.start(run.getId());
 
@@ -115,7 +115,7 @@ class RunServiceTest {
     @Test
     void completeRequiresRunningAndSetsFinishTime() {
         Run run = run();
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
 
         assertThatThrownBy(() -> service.complete(run.getId()))
                 .isInstanceOf(InvalidRunStateTransitionException.class);

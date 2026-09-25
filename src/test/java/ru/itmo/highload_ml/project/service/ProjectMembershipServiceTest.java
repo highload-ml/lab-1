@@ -66,7 +66,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberCreatesMembership() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.saveAndFlush(any(ProjectMembership.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -90,7 +90,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberRejectsUnknownUser() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.empty());
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> membershipService.addMember(
                 project.getId(), new AddMemberRequest(alice.getId(), ProjectRole.EDITOR)))
@@ -100,7 +100,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberRejectsDuplicate() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.existsById(new ProjectMembershipId(project.getId(), alice.getId()))).thenReturn(true);
 
         assertThatThrownBy(() -> membershipService.addMember(
@@ -112,7 +112,7 @@ class ProjectMembershipServiceTest {
     @Test
     void addMemberTranslatesConcurrentDuplicateToConflict() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
-        when(userRepository.findByIdForUpdate(alice.getId())).thenReturn(Optional.of(alice));
+        when(userRepository.findById(alice.getId())).thenReturn(Optional.of(alice));
         when(membershipRepository.saveAndFlush(any(ProjectMembership.class)))
                 .thenThrow(new DataIntegrityViolationException("pk"));
 
@@ -160,7 +160,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void changeRoleUpdatesRole() {
-        givenLockedProjectWithMember(ProjectRole.VIEWER);
+        givenProjectWithMember(ProjectRole.VIEWER);
 
         MemberResponse response = membershipService.changeRole(
                 project.getId(), alice.getId(), new UpdateMemberRoleRequest(ProjectRole.EDITOR));
@@ -170,7 +170,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void changeRoleRejectsDemotingLastOwner() {
-        givenLockedProjectWithMember(ProjectRole.OWNER);
+        givenProjectWithMember(ProjectRole.OWNER);
         when(membershipRepository.countByIdProjectIdAndRole(project.getId(), ProjectRole.OWNER)).thenReturn(1L);
 
         assertThatThrownBy(() -> membershipService.changeRole(
@@ -180,7 +180,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void changeRoleAllowsDemotingOwnerWhenAnotherOwnerExists() {
-        givenLockedProjectWithMember(ProjectRole.OWNER);
+        givenProjectWithMember(ProjectRole.OWNER);
         when(membershipRepository.countByIdProjectIdAndRole(project.getId(), ProjectRole.OWNER)).thenReturn(2L);
 
         MemberResponse response = membershipService.changeRole(
@@ -191,7 +191,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void changeRoleThrowsWhenProjectMissing() {
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.empty());
+        when(projectRepository.existsById(project.getId())).thenReturn(false);
 
         assertThatThrownBy(() -> membershipService.changeRole(
                 project.getId(), alice.getId(), new UpdateMemberRoleRequest(ProjectRole.EDITOR)))
@@ -200,7 +200,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void removeMemberDeletesMembership() {
-        ProjectMembership membership = givenLockedProjectWithMember(ProjectRole.EDITOR);
+        ProjectMembership membership = givenProjectWithMember(ProjectRole.EDITOR);
 
         membershipService.removeMember(project.getId(), alice.getId());
 
@@ -209,7 +209,7 @@ class ProjectMembershipServiceTest {
 
     @Test
     void removeMemberRejectsLastOwner() {
-        givenLockedProjectWithMember(ProjectRole.OWNER);
+        givenProjectWithMember(ProjectRole.OWNER);
         when(membershipRepository.countByIdProjectIdAndRole(project.getId(), ProjectRole.OWNER)).thenReturn(1L);
 
         assertThatThrownBy(() -> membershipService.removeMember(project.getId(), alice.getId()))
@@ -219,7 +219,6 @@ class ProjectMembershipServiceTest {
 
     @Test
     void removeMemberThrowsWhenNotMember() {
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
         when(projectRepository.existsById(project.getId())).thenReturn(true);
         when(membershipRepository.findWithUserById(any())).thenReturn(Optional.empty());
 
@@ -227,9 +226,8 @@ class ProjectMembershipServiceTest {
                 .isInstanceOf(MembershipNotFoundException.class);
     }
 
-    private ProjectMembership givenLockedProjectWithMember(ProjectRole role) {
+    private ProjectMembership givenProjectWithMember(ProjectRole role) {
         ProjectMembership membership = membership(project, alice, role);
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
         when(projectRepository.existsById(project.getId())).thenReturn(true);
         when(membershipRepository.findWithUserById(membership.getId())).thenReturn(Optional.of(membership));
         return membership;

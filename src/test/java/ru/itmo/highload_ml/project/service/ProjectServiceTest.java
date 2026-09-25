@@ -69,7 +69,7 @@ class ProjectServiceTest {
     @Test
     void createSavesProjectWithOwner() {
         User owner = user("alice");
-        when(userRepository.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
         when(projectRepository.existsByName("fraud")).thenReturn(false);
         when(projectRepository.saveAndFlush(any(Project.class))).thenAnswer(invocation -> {
             Project saved = invocation.getArgument(0);
@@ -91,7 +91,7 @@ class ProjectServiceTest {
     @Test
     void createRejectsTakenName() {
         User owner = user("alice");
-        when(userRepository.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
         when(projectRepository.existsByName("fraud")).thenReturn(true);
 
         assertThatThrownBy(() -> projectService.create(new CreateProjectRequest("fraud", null, owner.getId())))
@@ -103,7 +103,7 @@ class ProjectServiceTest {
     @Test
     void createTranslatesConcurrentUniqueViolationToConflict() {
         User owner = user("alice");
-        when(userRepository.findByIdForUpdate(owner.getId())).thenReturn(Optional.of(owner));
+        when(userRepository.findById(owner.getId())).thenReturn(Optional.of(owner));
         when(projectRepository.existsByName("fraud")).thenReturn(false);
         when(projectRepository.saveAndFlush(any(Project.class))).thenThrow(new DataIntegrityViolationException("uk"));
 
@@ -115,7 +115,7 @@ class ProjectServiceTest {
     @Test
     void createRejectsUnknownOwnerBeforeSavingProject() {
         UUID ownerId = UUID.randomUUID();
-        when(userRepository.findByIdForUpdate(ownerId)).thenReturn(Optional.empty());
+        when(userRepository.findById(ownerId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> projectService.create(new CreateProjectRequest("fraud", null, ownerId)))
                 .isInstanceOf(UserNotFoundException.class);
@@ -195,32 +195,32 @@ class ProjectServiceTest {
     @Test
     void deleteRemovesMembershipsThenProject() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.of(project("fraud")));
+        when(projectRepository.findById(id)).thenReturn(Optional.of(project("fraud")));
 
         projectService.delete(id);
 
         InOrder order = inOrder(membershipRepository, projectRepository);
-        order.verify(membershipRepository).deleteAllByProjectId(id);
+        order.verify(membershipRepository).deleteAllByIdProjectId(id);
         order.verify(projectRepository).deleteById(id);
     }
 
     @Test
     void deleteRejectsProjectWithExperiments() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.of(project("fraud")));
+        when(projectRepository.findById(id)).thenReturn(Optional.of(project("fraud")));
         when(experimentRepository.existsByProject_Id(id)).thenReturn(true);
 
         assertThatThrownBy(() -> projectService.delete(id)).isInstanceOf(ProjectHasExperimentsException.class);
-        verify(membershipRepository, never()).deleteAllByProjectId(id);
+        verify(membershipRepository, never()).deleteAllByIdProjectId(id);
         verify(projectRepository, never()).deleteById(id);
     }
 
     @Test
     void deleteThrowsWhenMissing() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
+        when(projectRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> projectService.delete(id)).isInstanceOf(ProjectNotFoundException.class);
-        verify(membershipRepository, never()).deleteAllByProjectId(any());
+        verify(membershipRepository, never()).deleteAllByIdProjectId(any());
     }
 }

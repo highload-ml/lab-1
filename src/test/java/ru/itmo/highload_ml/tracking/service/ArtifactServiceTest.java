@@ -46,7 +46,7 @@ class ArtifactServiceTest {
     @Test
     void registersMetadataForLockedRunningRun() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(artifactRepository.saveAndFlush(any(Artifact.class))).thenAnswer(invocation -> {
             Artifact artifact = invocation.getArgument(0);
             ReflectionTestUtils.setField(artifact, "id", UUID.randomUUID());
@@ -69,7 +69,7 @@ class ArtifactServiceTest {
     void rejectsRegistrationBeforeStartOrAfterCompletion() {
         for (RunStatus status : List.of(RunStatus.CREATED, RunStatus.COMPLETED, RunStatus.FAILED)) {
             Run run = run(status);
-            when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+            when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
             assertThatThrownBy(() -> service.register(run.getId(), request()))
                     .isInstanceOf(RunNotAcceptingArtifactsException.class);
         }
@@ -79,7 +79,7 @@ class ArtifactServiceTest {
     @Test
     void rejectsExistingNameBeforeInsert() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(artifactRepository.existsByRun_IdAndName(run.getId(), "weights")).thenReturn(true);
 
         assertThatThrownBy(() -> service.register(run.getId(), request()))
@@ -90,7 +90,7 @@ class ArtifactServiceTest {
     @Test
     void translatesUniqueConstraintRaceToConflict() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         ConstraintViolationException violation = mock(ConstraintViolationException.class);
         when(violation.getConstraintName()).thenReturn("uk_artifacts_run_name");
         when(artifactRepository.saveAndFlush(any(Artifact.class)))
@@ -114,7 +114,7 @@ class ArtifactServiceTest {
     @Test
     void missingRunIsNotFound() {
         UUID runId = UUID.randomUUID();
-        when(runRepository.findByIdForUpdate(runId)).thenReturn(Optional.empty());
+        when(runRepository.findById(runId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.register(runId, request()))
                 .isInstanceOf(RunNotFoundException.class);

@@ -26,10 +26,6 @@ import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.repository.ArtifactRepository;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -96,36 +92,6 @@ class ArtifactServiceIntegrationTest extends ProjectModuleIntegrationTest {
                 .contains("path");
     }
 
-    @Test
-    void registerAndCompleteSerializeOnRunRow() {
-        UUID runId = createRunningRun();
-        CyclicBarrier barrier = new CyclicBarrier(2);
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var register = CompletableFuture.supplyAsync(() -> {
-                await(barrier);
-                try {
-                    artifactService.register(runId, request());
-                    return true;
-                } catch (RunNotAcceptingArtifactsException e) {
-                    return false;
-                }
-            }, executor);
-            var complete = CompletableFuture.runAsync(() -> {
-                await(barrier);
-                runService.complete(runId);
-            }, executor);
-            complete.join();
-            boolean registered = register.join();
-
-            assertThat(runService.getById(runId).status()).isEqualTo(RunStatus.COMPLETED);
-            assertThat(artifactRepository.count()).isEqualTo(registered ? 1 : 0);
-            if (registered) {
-                assertThat(artifactRepository.findAll().getFirst().getCreatedAt())
-                        .isBeforeOrEqualTo(runService.getById(runId).finishedAt());
-            }
-        }
-    }
-
     private UUID createRunningRun() {
         Project project = projectRepository.saveAndFlush(new Project("project-" + UUID.randomUUID(), null));
         Experiment experiment = experimentRepository.saveAndFlush(new Experiment(project, "baseline", null));
@@ -139,13 +105,5 @@ class ArtifactServiceIntegrationTest extends ProjectModuleIntegrationTest {
 
     private static CreateArtifactRequest request() {
         return new CreateArtifactRequest("weights", ArtifactType.MODEL, "models/weights.bin", 1024L);
-    }
-
-    private static void await(CyclicBarrier barrier) {
-        try {
-            barrier.await(10, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

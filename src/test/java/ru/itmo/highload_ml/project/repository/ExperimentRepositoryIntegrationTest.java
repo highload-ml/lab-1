@@ -49,16 +49,16 @@ class ExperimentRepositoryIntegrationTest extends ProjectModuleIntegrationTest {
         assertThat(page.getTotalElements()).isEqualTo(2);
         assertThat(page.getContent()).hasSize(1);
 
-        var filtered = experimentRepository.findByProjectAndTag(
+        var filtered = experimentRepository.findByProject_IdAndTags_Id(
                 project.getId(), baseline.getId(), PageRequest.of(0, 10));
         assertThat(filtered.getTotalElements()).isEqualTo(1);
         assertThat(filtered.getContent()).extracting(Experiment::getId).containsExactly(first.getId());
 
-        assertThat(experimentRepository.findByIdAndProjectIdWithTags(first.getId(), project.getId()))
+        assertThat(experimentRepository.findWithTagsByIdAndProject_Id(first.getId(), project.getId()))
                 .get().extracting(experiment -> experiment.getTags().size()).isEqualTo(2);
-        assertThat(experimentRepository.findByIdAndProjectIdWithTags(first.getId(), otherProject.getId()))
+        assertThat(experimentRepository.findWithTagsByIdAndProject_Id(first.getId(), otherProject.getId()))
                 .isEmpty();
-        assertThat(experimentRepository.findByIdAndProjectIdWithTags(second.getId(), project.getId()))
+        assertThat(experimentRepository.findWithTagsByIdAndProject_Id(second.getId(), project.getId()))
                 .isPresent();
     }
 

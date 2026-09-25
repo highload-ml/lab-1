@@ -51,7 +51,7 @@ class ExperimentServiceTest {
     @Test
     void createSavesExperimentInLockedProject() {
         Project project = project("fraud");
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
+        when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
         when(experimentRepository.saveAndFlush(any(Experiment.class))).thenAnswer(invocation -> {
             Experiment experiment = invocation.getArgument(0);
             ReflectionTestUtils.setField(experiment, "id", UUID.randomUUID());
@@ -68,7 +68,7 @@ class ExperimentServiceTest {
     @Test
     void createRejectsUnknownProject() {
         UUID projectId = UUID.randomUUID();
-        when(projectRepository.findByIdForUpdate(projectId)).thenReturn(Optional.empty());
+        when(projectRepository.findById(projectId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(projectId, new CreateExperimentRequest("baseline", null)))
                 .isInstanceOf(ProjectNotFoundException.class);
@@ -78,7 +78,7 @@ class ExperimentServiceTest {
     @Test
     void createRejectsTakenName() {
         Project project = project("fraud");
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
+        when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
         when(experimentRepository.existsByProject_IdAndName(project.getId(), "baseline")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(project.getId(), new CreateExperimentRequest("baseline", null)))
@@ -91,7 +91,7 @@ class ExperimentServiceTest {
         Project project = project("fraud");
         UUID experimentId = UUID.randomUUID();
         when(projectRepository.existsById(project.getId())).thenReturn(true);
-        when(experimentRepository.findByIdAndProjectIdWithTags(experimentId, project.getId()))
+        when(experimentRepository.findWithTagsByIdAndProject_Id(experimentId, project.getId()))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getById(project.getId(), experimentId))
@@ -104,8 +104,8 @@ class ExperimentServiceTest {
         Experiment experiment = new Experiment(project, "old", null);
         UUID experimentId = UUID.randomUUID();
         ReflectionTestUtils.setField(experiment, "id", experimentId);
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
-        when(experimentRepository.findByIdAndProjectIdForUpdate(experimentId, project.getId()))
+        when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
+        when(experimentRepository.findByIdAndProject_Id(experimentId, project.getId()))
                 .thenReturn(Optional.of(experiment));
 
         var response = service.update(project.getId(), experimentId, new CreateExperimentRequest("new", "updated"));
@@ -122,8 +122,8 @@ class ExperimentServiceTest {
         UUID experimentId = UUID.randomUUID();
         UUID tagId = UUID.randomUUID();
         ReflectionTestUtils.setField(experiment, "id", experimentId);
-        when(projectRepository.findByIdForUpdate(project.getId())).thenReturn(Optional.of(project));
-        when(experimentRepository.findByIdAndProjectIdForUpdate(experimentId, project.getId()))
+        when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
+        when(experimentRepository.findByIdAndProject_Id(experimentId, project.getId()))
                 .thenReturn(Optional.of(experiment));
         when(tagRepository.findById(tagId)).thenReturn(Optional.empty());
 

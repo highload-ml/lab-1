@@ -5,7 +5,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import ru.itmo.highload_ml.project.exception.ExperimentNotFoundException;
+import ru.itmo.highload_ml.project.model.Experiment;
+import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.repository.ExperimentRepository;
 
 import java.util.Optional;
@@ -46,7 +49,9 @@ class ExperimentAccessServiceTest {
     void getProjectIdReturnsOwningProject() {
         UUID id = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
-        when(experimentRepository.findProjectIdByExperimentId(id)).thenReturn(Optional.of(projectId));
+        Project project = new Project("fraud", null);
+        ReflectionTestUtils.setField(project, "id", projectId);
+        when(experimentRepository.findById(id)).thenReturn(Optional.of(new Experiment(project, "baseline", null)));
 
         assertThat(experimentAccessService.getProjectId(id)).isEqualTo(projectId);
     }
@@ -54,7 +59,7 @@ class ExperimentAccessServiceTest {
     @Test
     void getProjectIdThrowsNotFoundForUnknownExperiment() {
         UUID id = UUID.randomUUID();
-        when(experimentRepository.findProjectIdByExperimentId(id)).thenReturn(Optional.empty());
+        when(experimentRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> experimentAccessService.getProjectId(id))
                 .isInstanceOf(ExperimentNotFoundException.class);

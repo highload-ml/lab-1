@@ -23,7 +23,6 @@ import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.model.UserRole;
 import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
-import ru.itmo.highload_ml.project.security.PasswordHasher;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,9 +43,6 @@ class UserServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private PasswordHasher passwordHasher;
-
-    @Mock
     private ProjectMembershipRepository membershipRepository;
 
     @Spy
@@ -59,9 +55,8 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void createStoresHashedPasswordAndReturnsResponse() {
+    void createSavesUserAndReturnsResponse() {
         when(userRepository.existsByNickname("alice")).thenReturn(false);
-        when(passwordHasher.hash("password123")).thenReturn("hashed");
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserResponse response = userService.create(
@@ -69,7 +64,8 @@ class UserServiceTest {
 
         ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
         verify(userRepository).saveAndFlush(saved.capture());
-        assertThat(saved.getValue().getPasswordHash()).isEqualTo("hashed");
+        assertThat(saved.getValue().getNickname()).isEqualTo("alice");
+        assertThat(saved.getValue().getRole()).isEqualTo(UserRole.ML_ENGINEER);
         assertThat(response.nickname()).isEqualTo("alice");
         assertThat(response.role()).isEqualTo(UserRole.ML_ENGINEER);
     }
@@ -87,7 +83,6 @@ class UserServiceTest {
     @Test
     void createTranslatesConcurrentUniqueViolationToConflict() {
         when(userRepository.existsByNickname("alice")).thenReturn(false);
-        when(passwordHasher.hash(any())).thenReturn("hashed");
         when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataIntegrityViolationException("uk_users_nickname"));
 
         assertThatThrownBy(() -> userService.create(new CreateUserRequest("alice", "password123", UserRole.ADMIN)))
@@ -183,7 +178,7 @@ class UserServiceTest {
     void deleteRemovesExistingUser() {
         UUID id = UUID.randomUUID();
         User user = new User("alice", "hash", UserRole.ADMIN);
-        when(userRepository.findByIdForUpdate(id)).thenReturn(Optional.of(user));
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
         userService.delete(id);
 
@@ -193,7 +188,7 @@ class UserServiceTest {
     @Test
     void deleteRejectsUserWhoStillBelongsToProjects() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findByIdForUpdate(id))
+        when(userRepository.findById(id))
                 .thenReturn(Optional.of(new User("alice", "hash", UserRole.ADMIN)));
         when(membershipRepository.existsByIdUserId(id)).thenReturn(true);
 
@@ -204,7 +199,7 @@ class UserServiceTest {
     @Test
     void deleteThrowsWhenMissing() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.delete(id)).isInstanceOf(UserNotFoundException.class);
         verify(userRepository, never()).delete(any());

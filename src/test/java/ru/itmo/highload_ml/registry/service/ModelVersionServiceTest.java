@@ -18,7 +18,8 @@ import ru.itmo.highload_ml.registry.mapper.ModelVersionMapper;
 import ru.itmo.highload_ml.registry.model.ModelVersion;
 import ru.itmo.highload_ml.registry.model.ModelVersionState;
 import ru.itmo.highload_ml.registry.repository.ModelVersionRepository;
-import ru.itmo.highload_ml.registry.repository.RegistryVersionCounter;
+import ru.itmo.highload_ml.registry.model.RegistryVersionCounter;
+import ru.itmo.highload_ml.registry.repository.RegistryVersionCounterRepository;
 import ru.itmo.highload_ml.tracking.model.ArtifactType;
 import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.port.ArtifactDetails;
@@ -45,7 +46,7 @@ class ModelVersionServiceTest {
     @Mock private ExperimentAccessPort experimentAccessPort;
     @Mock private ArtifactLookupPort artifactLookupPort;
     @Mock private ModelVersionRepository repository;
-    @Mock private RegistryVersionCounter counter;
+    @Mock private RegistryVersionCounterRepository counterRepository;
     @Spy private ModelVersionMapper mapper = new ModelVersionMapper();
     @InjectMocks private ModelVersionService service;
 
@@ -59,7 +60,7 @@ class ModelVersionServiceTest {
         when(artifactLookupPort.getDetails(artifactId)).thenReturn(
                 new ArtifactDetails(artifactId, experimentId, ArtifactType.MODEL, RunStatus.COMPLETED));
         when(experimentAccessPort.getProjectId(experimentId)).thenReturn(projectId);
-        when(counter.allocate(projectId)).thenReturn(1L);
+        when(counterRepository.findById(projectId)).thenReturn(Optional.empty());
         when(repository.saveAndFlush(any(ModelVersion.class))).thenAnswer(invocation -> {
             ModelVersion version = invocation.getArgument(0);
             ReflectionTestUtils.setField(version, "id", UUID.randomUUID());
@@ -73,12 +74,33 @@ class ModelVersionServiceTest {
         assertThat(response.artifactId()).isEqualTo(artifactId);
         assertThat(response.version()).isEqualTo(1);
         assertThat(response.state()).isEqualTo(ModelVersionState.NEW);
-        var calls = inOrder(projectAccessPort, artifactLookupPort, experimentAccessPort, counter, repository);
+        var calls = inOrder(projectAccessPort, artifactLookupPort, experimentAccessPort, counterRepository, repository);
         calls.verify(projectAccessPort).requireMember(projectId, userId);
         calls.verify(artifactLookupPort).getDetails(artifactId);
         calls.verify(experimentAccessPort).getProjectId(experimentId);
-        calls.verify(counter).allocate(projectId);
+        calls.verify(counterRepository).save(any(RegistryVersionCounter.class));
         calls.verify(repository).saveAndFlush(any(ModelVersion.class));
+    }
+
+    @Test
+    void registerContinuesExistingProjectCounter() {
+        when(artifactLookupPort.getDetails(artifactId)).thenReturn(
+                new ArtifactDetails(artifactId, experimentId, ArtifactType.MODEL, RunStatus.COMPLETED));
+        when(experimentAccessPort.getProjectId(experimentId)).thenReturn(projectId);
+        RegistryVersionCounter existing = new RegistryVersionCounter(projectId);
+        existing.allocate();
+        existing.allocate();
+        when(counterRepository.findById(projectId)).thenReturn(Optional.of(existing));
+        when(repository.saveAndFlush(any(ModelVersion.class))).thenAnswer(invocation -> {
+            ModelVersion version = invocation.getArgument(0);
+            ReflectionTestUtils.setField(version, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(version, "createdAt", Instant.now());
+            return version;
+        });
+
+        assertThat(service.register(projectId, request()).version()).isEqualTo(3);
+        assertThat(existing.getNextVersion()).isEqualTo(4);
+        verify(counterRepository).save(existing);
     }
 
     @Test
@@ -98,13 +120,13 @@ class ModelVersionServiceTest {
 
         assertThatThrownBy(() -> service.register(projectId, request()))
                 .isInstanceOf(InvalidModelArtifactException.class);
-        verify(counter, never()).allocate(any());
+        verify(counterRepository, never()).save(any());
     }
 
     @Test
     void stageRequiresNewVersion() {
         ModelVersion version = version();
-        when(repository.findByIdAndProjectIdForUpdate(version.getId(), projectId))
+        when(repository.findByIdAndProjectId(version.getId(), projectId))
                 .thenReturn(Optional.of(version));
 
         assertThat(service.stage(projectId, version.getId(), userId).state())
@@ -121,8 +143,7 @@ class ModelVersionServiceTest {
         old.promote(Instant.now().minusSeconds(10));
         ModelVersion target = version();
         target.stage();
-        when(repository.existsByIdAndProjectId(target.getId(), projectId)).thenReturn(true);
-        when(repository.findByIdAndProjectIdForUpdate(target.getId(), projectId))
+        when(repository.findByIdAndProjectId(target.getId(), projectId))
                 .thenReturn(Optional.of(target));
         when(repository.findByProjectIdAndState(projectId, ModelVersionState.PRODUCTION))
                 .thenReturn(Optional.of(old));
@@ -132,19 +153,10 @@ class ModelVersionServiceTest {
         assertThat(old.getState()).isEqualTo(ModelVersionState.ARCHIVED);
         assertThat(promoted.state()).isEqualTo(ModelVersionState.PRODUCTION);
         assertThat(promoted.promotedAt()).isNotNull();
-        var calls = inOrder(counter, repository);
-        calls.verify(counter).lock(projectId);
-        calls.verify(repository).findByIdAndProjectIdForUpdate(target.getId(), projectId);
+        var calls = inOrder(repository);
+        calls.verify(repository).findByIdAndProjectId(target.getId(), projectId);
         calls.verify(repository).findByProjectIdAndState(projectId, ModelVersionState.PRODUCTION);
         calls.verify(repository, times(2)).flush();
-    }
-
-    @Test
-    void promotionReturnsNotFoundBeforeTryingToLockMissingCounter() {
-        UUID missingId = UUID.randomUUID();
-        assertThatThrownBy(() -> service.promoteToProduction(projectId, missingId, userId))
-                .isInstanceOf(ModelVersionNotFoundException.class);
-        verify(counter, never()).lock(any());
     }
 
     private RegisterModelVersionRequest request() {
