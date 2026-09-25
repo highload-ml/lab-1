@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.tracking.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -21,20 +22,13 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class RunService {
 
     private final ExperimentAccessPort experimentAccessPort;
     private final ProjectAccessPort projectAccessPort;
     private final RunRepository runRepository;
     private final RunMapper mapper;
-
-    public RunService(ExperimentAccessPort experimentAccessPort, ProjectAccessPort projectAccessPort,
-                      RunRepository runRepository, RunMapper mapper) {
-        this.experimentAccessPort = experimentAccessPort;
-        this.projectAccessPort = projectAccessPort;
-        this.runRepository = runRepository;
-        this.mapper = mapper;
-    }
 
     @Transactional
     public RunResponse create(UUID experimentId, CreateRunRequest request) {

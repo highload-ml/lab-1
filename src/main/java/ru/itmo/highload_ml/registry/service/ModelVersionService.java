@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.registry.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ModelVersionService {
 
     private final ProjectAccessPort projectAccessPort;
@@ -36,17 +38,6 @@ public class ModelVersionService {
     private final ModelVersionRepository repository;
     private final RegistryVersionCounter counter;
     private final ModelVersionMapper mapper;
-
-    public ModelVersionService(ProjectAccessPort projectAccessPort, ExperimentAccessPort experimentAccessPort,
-                               ArtifactLookupPort artifactLookupPort, ModelVersionRepository repository,
-                               RegistryVersionCounter counter, ModelVersionMapper mapper) {
-        this.projectAccessPort = projectAccessPort;
-        this.experimentAccessPort = experimentAccessPort;
-        this.artifactLookupPort = artifactLookupPort;
-        this.repository = repository;
-        this.counter = counter;
-        this.mapper = mapper;
-    }
 
     @Transactional
     public ModelVersionResponse register(UUID projectId, RegisterModelVersionRequest request) {

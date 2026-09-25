@@ -1,5 +1,6 @@
 package ru.itmo.highload_ml.tracking.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,17 +27,12 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MetricService {
 
     private final RunRepository runRepository;
     private final MetricRepository metricRepository;
     private final MetricMapper mapper;
-
-    public MetricService(RunRepository runRepository, MetricRepository metricRepository, MetricMapper mapper) {
-        this.runRepository = runRepository;
-        this.metricRepository = metricRepository;
-        this.mapper = mapper;
-    }
 
     @Transactional
     public MetricResponse log(UUID runId, CreateMetricRequest request) {

@@ -10,6 +10,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,6 +21,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "metrics")
+@Getter
+@NoArgsConstructor()
 public class Metric {
 
     @Id
@@ -40,9 +45,6 @@ public class Metric {
     @Column(name = "recorded_at", nullable = false, updatable = false)
     private Instant recordedAt;
 
-    protected Metric() {
-    }
-
     public Metric(Run run, String name, BigDecimal value, long step) {
         this.run = run;
         this.name = name;
@@ -55,29 +57,5 @@ public class Metric {
         if (recordedAt == null) {
             recordedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         }
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public Run getRun() {
-        return run;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public BigDecimal getValue() {
-        return value;
-    }
-
-    public long getStep() {
-        return step;
-    }
-
-    public Instant getRecordedAt() {
-        return recordedAt;
     }
 }
