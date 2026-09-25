@@ -38,11 +38,10 @@ public class ProjectService {
 
     /**
      * The project and its initial OWNER membership must commit or roll back together.
-     * Locking the owner row also serializes this operation with user deletion.
      */
     @Transactional
     public ProjectResponse create(CreateProjectRequest request) {
-        User owner = userRepository.findByIdForUpdate(request.ownerId())
+        User owner = userRepository.findById(request.ownerId())
                 .orElseThrow(() -> new UserNotFoundException(request.ownerId()));
 
         requireNameFree(request.name());
@@ -86,11 +85,11 @@ public class ProjectService {
      */
     @Transactional
     public void delete(UUID id) {
-        projectRepository.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFoundException(id));
+        findProject(id);
         if (experimentRepository.existsByProject_Id(id)) {
             throw new ProjectHasExperimentsException(id);
         }
-        membershipRepository.deleteAllByProjectId(id);
+        membershipRepository.deleteAllByIdProjectId(id);
         projectRepository.deleteById(id);
     }
 

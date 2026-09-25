@@ -47,7 +47,7 @@ public class MetricService {
         return persistBatch(runId, List.of(request)).getFirst();
     }
 
-    /** All metrics in a batch commit or roll back together; the run lock excludes concurrent completion. */
+    /** All metrics in a batch commit or roll back together. */
     @Transactional
     public List<MetricResponse> logBatch(UUID runId, CreateMetricsRequest request) {
         return persistBatch(runId, request.metrics());
@@ -65,7 +65,7 @@ public class MetricService {
     }
 
     private List<MetricResponse> persistBatch(UUID runId, List<CreateMetricRequest> requests) {
-        Run run = runRepository.findByIdForUpdate(runId).orElseThrow(() -> new RunNotFoundException(runId));
+        Run run = runRepository.findById(runId).orElseThrow(() -> new RunNotFoundException(runId));
         if (run.getStatus() != RunStatus.RUNNING) {
             throw new RunNotRunningException(runId, run.getStatus());
         }

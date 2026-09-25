@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.exception.ExperimentNotFoundException;
+import ru.itmo.highload_ml.project.model.Experiment;
 import ru.itmo.highload_ml.project.port.ExperimentAccessPort;
 import ru.itmo.highload_ml.project.repository.ExperimentRepository;
 
@@ -25,7 +26,8 @@ public class ExperimentAccessService implements ExperimentAccessPort {
 
     @Override
     public UUID getProjectId(UUID experimentId) {
-        return experimentRepository.findProjectIdByExperimentId(experimentId)
+        return experimentRepository.findById(experimentId)
+                .map(Experiment::getProjectId)
                 .orElseThrow(() -> new ExperimentNotFoundException(experimentId));
     }
 }

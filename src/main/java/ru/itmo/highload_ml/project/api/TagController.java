@@ -60,8 +60,9 @@ public class TagController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "404", description = "Tag not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public TagResponse getById(@PathVariable UUID tagId) {
-        return tagService.getById(tagId);
+    public ResponseEntity<TagResponse> getById(@PathVariable UUID tagId) {
+        TagResponse tag = tagService.getById(tagId);
+        return ResponseEntity.ok(tag);
     }
 
     @GetMapping

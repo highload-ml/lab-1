@@ -65,8 +65,9 @@ public class ExperimentController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "404", description = "Project or experiment not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ExperimentResponse getById(@PathVariable UUID projectId, @PathVariable UUID experimentId) {
-        return experimentService.getById(projectId, experimentId);
+    public ResponseEntity<ExperimentResponse> getById(@PathVariable UUID projectId, @PathVariable UUID experimentId) {
+        ExperimentResponse experiment = experimentService.getById(projectId, experimentId);
+        return ResponseEntity.ok(experiment);
     }
 
     @GetMapping
@@ -98,9 +99,10 @@ public class ExperimentController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "Experiment name already taken in this project",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ExperimentResponse update(@PathVariable UUID projectId, @PathVariable UUID experimentId,
-                                     @Valid @RequestBody CreateExperimentRequest request) {
-        return experimentService.update(projectId, experimentId, request);
+    public ResponseEntity<ExperimentResponse> update(@PathVariable UUID projectId, @PathVariable UUID experimentId,
+                                                     @Valid @RequestBody CreateExperimentRequest request) {
+        ExperimentResponse experiment = experimentService.update(projectId, experimentId, request);
+        return ResponseEntity.ok(experiment);
     }
 
     @PutMapping("/{experimentId}/tags/{tagId}")
@@ -108,9 +110,10 @@ public class ExperimentController {
     @ApiResponse(responseCode = "200", description = "Experiment with updated tags")
     @ApiResponse(responseCode = "404", description = "Project, experiment or tag not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ExperimentResponse addTag(@PathVariable UUID projectId, @PathVariable UUID experimentId,
-                                     @PathVariable UUID tagId) {
-        return experimentService.addTag(projectId, experimentId, tagId);
+    public ResponseEntity<ExperimentResponse> addTag(@PathVariable UUID projectId, @PathVariable UUID experimentId,
+                                                     @PathVariable UUID tagId) {
+        ExperimentResponse experiment = experimentService.addTag(projectId, experimentId, tagId);
+        return ResponseEntity.ok(experiment);
     }
 
     @DeleteMapping("/{experimentId}/tags/{tagId}")

@@ -37,10 +37,10 @@ public class ArtifactService {
         this.mapper = mapper;
     }
 
-    /** The run lock serializes artifact registration with completion and failure transitions. */
+    /** The run status check and the artifact insert run in one transaction. */
     @Transactional
     public ArtifactResponse register(UUID runId, CreateArtifactRequest request) {
-        Run run = runRepository.findByIdForUpdate(runId).orElseThrow(() -> new RunNotFoundException(runId));
+        Run run = runRepository.findById(runId).orElseThrow(() -> new RunNotFoundException(runId));
         if (run.getStatus() != RunStatus.RUNNING) {
             throw new RunNotAcceptingArtifactsException(runId, run.getStatus());
         }

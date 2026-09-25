@@ -70,10 +70,10 @@ public class RunService {
         return runs.map(mapper::toResponse);
     }
 
-    /** The run row lock serializes this transition with other transitions and future metric/artifact writes. */
+    /** Status check and transition are applied in one transaction and flushed before the response is built. */
     @Transactional
     public RunResponse start(UUID runId) {
-        Run run = lockRun(runId);
+        Run run = findRun(runId);
         requireStatus(run, RunStatus.CREATED, RunStatus.RUNNING);
         run.setStartedAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
         run.setStatus(RunStatus.RUNNING);
@@ -92,7 +92,7 @@ public class RunService {
     }
 
     private RunResponse finish(UUID runId, RunStatus target) {
-        Run run = lockRun(runId);
+        Run run = findRun(runId);
         requireStatus(run, RunStatus.RUNNING, target);
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         // Keep the database invariant even if the system clock moves backwards between transitions.
@@ -102,8 +102,8 @@ public class RunService {
         return mapper.toResponse(run);
     }
 
-    private Run lockRun(UUID runId) {
-        return runRepository.findByIdForUpdate(runId)
+    private Run findRun(UUID runId) {
+        return runRepository.findById(runId)
                 .orElseThrow(() -> new RunNotFoundException(runId));
     }
 

@@ -68,8 +68,9 @@ public class ProjectMemberController {
     @ApiResponse(responseCode = "200", description = "Member found")
     @ApiResponse(responseCode = "404", description = "Project not found or user is not a member",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public MemberResponse getMember(@PathVariable UUID projectId, @PathVariable UUID userId) {
-        return membershipService.getMember(projectId, userId);
+    public ResponseEntity<MemberResponse> getMember(@PathVariable UUID projectId, @PathVariable UUID userId) {
+        MemberResponse member = membershipService.getMember(projectId, userId);
+        return ResponseEntity.ok(member);
     }
 
     @GetMapping
@@ -98,12 +99,13 @@ public class ProjectMemberController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Would demote the last owner",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public MemberResponse changeRole(
+    public ResponseEntity<MemberResponse> changeRole(
             @PathVariable UUID projectId,
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateMemberRoleRequest request
     ) {
-        return membershipService.changeRole(projectId, userId, request);
+        MemberResponse role = membershipService.changeRole(projectId, userId, request);
+        return ResponseEntity.ok(role);
     }
 
     @DeleteMapping("/{userId}")

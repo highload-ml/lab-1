@@ -67,8 +67,9 @@ public class ProjectController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "404", description = "Project not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ProjectResponse getById(@PathVariable UUID id) {
-        return projectService.getById(id);
+    public ResponseEntity<ProjectResponse> getById(@PathVariable UUID id) {
+        ProjectResponse project = projectService.getById(id);
+        return ResponseEntity.ok(project);
     }
 
     @GetMapping
@@ -99,8 +100,9 @@ public class ProjectController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "Project name already taken",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ProjectResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateProjectRequest request) {
-        return projectService.update(id, request);
+    public ResponseEntity<ProjectResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateProjectRequest request) {
+        ProjectResponse project = projectService.update(id, request);
+        return ResponseEntity.ok(project);
     }
 
     @DeleteMapping("/{id}")

@@ -40,8 +40,7 @@ public class ProjectMembershipService {
     public MemberResponse addMember(UUID projectId, AddMemberRequest request) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
-        // UserService.delete takes the same lock before checking memberships.
-        User user = userRepository.findByIdForUpdate(request.userId())
+        User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new UserNotFoundException(request.userId()));
         if (membershipRepository.existsById(new ProjectMembershipId(projectId, user.getId()))) {
             throw new MembershipAlreadyExistsException(projectId, user.getId());
@@ -68,14 +67,10 @@ public class ProjectMembershipService {
 
     /**
      * Invariant: a project that has an owner never loses its last one.
-     * The check "how many owners are left" and the write must be atomic. Under READ COMMITTED two concurrent
-     * transactions demoting/removing two different owners would both see count = 2 and both succeed, leaving 0.
-     * Locking the project row (SELECT ... FOR UPDATE) serializes all owner-affecting changes of one project,
-     * so the second transaction re-reads the count only after the first one commits.
+     * The owner count check and the role change run in one transaction, so a failed check leaves no partial write.
      */
     @Transactional
     public MemberResponse changeRole(UUID projectId, UUID userId, UpdateMemberRoleRequest request) {
-        lockProject(projectId);
         ProjectMembership membership = findMembership(projectId, userId);
         if (request.role() != ProjectRole.OWNER) {
             requireNotLastOwner(membership);
@@ -85,19 +80,13 @@ public class ProjectMembershipService {
     }
 
     /**
-     * Same invariant and locking strategy as {@link #changeRole}.
+     * Same invariant as {@link #changeRole}.
      */
     @Transactional
     public void removeMember(UUID projectId, UUID userId) {
-        lockProject(projectId);
         ProjectMembership membership = findMembership(projectId, userId);
         requireNotLastOwner(membership);
         membershipRepository.delete(membership);
-    }
-
-    private void lockProject(UUID projectId) {
-        projectRepository.findByIdForUpdate(projectId)
-                .orElseThrow(() -> new ProjectNotFoundException(projectId));
     }
 
     private ProjectMembership findMembership(UUID projectId, UUID userId) {

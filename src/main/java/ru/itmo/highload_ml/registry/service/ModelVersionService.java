@@ -18,7 +18,8 @@ import ru.itmo.highload_ml.registry.mapper.ModelVersionMapper;
 import ru.itmo.highload_ml.registry.model.ModelVersion;
 import ru.itmo.highload_ml.registry.model.ModelVersionState;
 import ru.itmo.highload_ml.registry.repository.ModelVersionRepository;
-import ru.itmo.highload_ml.registry.repository.RegistryVersionCounter;
+import ru.itmo.highload_ml.registry.model.RegistryVersionCounter;
+import ru.itmo.highload_ml.registry.repository.RegistryVersionCounterRepository;
 import ru.itmo.highload_ml.tracking.model.ArtifactType;
 import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.port.ArtifactDetails;
@@ -38,21 +39,22 @@ public class ModelVersionService {
     private final ExperimentAccessPort experimentAccessPort;
     private final ArtifactLookupPort artifactLookupPort;
     private final ModelVersionRepository repository;
-    private final RegistryVersionCounter counter;
+    private final RegistryVersionCounterRepository counterRepository;
     private final ModelVersionMapper mapper;
 
     public ModelVersionService(ProjectAccessPort projectAccessPort, ExperimentAccessPort experimentAccessPort,
                                ArtifactLookupPort artifactLookupPort, ModelVersionRepository repository,
-                               RegistryVersionCounter counter, ModelVersionMapper mapper) {
+                               RegistryVersionCounterRepository counterRepository,
+                               ModelVersionMapper mapper) {
         this.projectAccessPort = projectAccessPort;
         this.experimentAccessPort = experimentAccessPort;
         this.artifactLookupPort = artifactLookupPort;
         this.repository = repository;
-        this.counter = counter;
+        this.counterRepository = counterRepository;
         this.mapper = mapper;
     }
 
-    /** The counter upsert serializes registrations in a project; the insert and counter advance commit together. */
+    /** The counter advance and the version insert commit or roll back together. */
     @Transactional
     public ModelVersionResponse register(UUID projectId, RegisterModelVersionRequest request) {
         projectAccessPort.requireMember(projectId, request.userId());
@@ -67,10 +69,10 @@ public class ModelVersionService {
             throw new InvalidModelArtifactException(request.artifactId(), "artifact belongs to another project");
         }
 
-        long version = counter.allocate(projectId);
         if (repository.existsByArtifactId(request.artifactId())) {
             throw new ModelArtifactAlreadyRegisteredException(request.artifactId());
         }
+        long version = allocateVersion(projectId);
         try {
             return mapper.toResponse(repository.saveAndFlush(
                     new ModelVersion(projectId, request.artifactId(), version)));
@@ -99,26 +101,20 @@ public class ModelVersionService {
                 .orElseThrow(() -> new ModelVersionNotFoundException(projectId, "production")));
     }
 
-    /** Locks the version row, so concurrent stage/promote calls cannot skip a state transition. */
     @Transactional
     public ModelVersionResponse stage(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
-        ModelVersion version = lockVersion(projectId, versionId);
+        ModelVersion version = findVersion(projectId, versionId);
         version.stage();
         repository.flush();
         return mapper.toResponse(version);
     }
 
-    /** Project lock serializes promotions; archiving and promotion are one atomic transaction. */
+    /** Archiving the old production version and promoting the target are one atomic transaction. */
     @Transactional
     public ModelVersionResponse promoteToProduction(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
-        if (!repository.existsByIdAndProjectId(versionId, projectId)) {
-            throw new ModelVersionNotFoundException(versionId);
-        }
-        // Every registered version has a counter row. Lock it before reading production or the target.
-        counter.lock(projectId);
-        ModelVersion target = lockVersion(projectId, versionId);
+        ModelVersion target = findVersion(projectId, versionId);
         if (target.getState() != ModelVersionState.STAGING) {
             throw new InvalidModelVersionTransitionException(
                     versionId, target.getState(), ModelVersionState.PRODUCTION);
@@ -135,8 +131,16 @@ public class ModelVersionService {
         return mapper.toResponse(target);
     }
 
-    private ModelVersion lockVersion(UUID projectId, UUID versionId) {
-        return repository.findByIdAndProjectIdForUpdate(versionId, projectId)
+    private long allocateVersion(UUID projectId) {
+        RegistryVersionCounter counter = counterRepository.findById(projectId)
+                .orElseGet(() -> new RegistryVersionCounter(projectId));
+        long version = counter.allocate();
+        counterRepository.save(counter);
+        return version;
+    }
+
+    private ModelVersion findVersion(UUID projectId, UUID versionId) {
+        return repository.findByIdAndProjectId(versionId, projectId)
                 .orElseThrow(() -> new ModelVersionNotFoundException(versionId));
     }
 

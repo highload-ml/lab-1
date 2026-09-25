@@ -37,10 +37,10 @@ public class ExperimentService {
     private final TagRepository tagRepository;
     private final ExperimentMapper mapper;
 
-    /** The project lock serializes creates and renames and coordinates with project deletion. */
+    /** The existence check, name check and insert run in one transaction; the unique index resolves races as 409. */
     @Transactional
     public ExperimentResponse create(UUID projectId, CreateExperimentRequest request) {
-        Project project = lockProject(projectId);
+        Project project = findProject(projectId);
         requireNameFree(projectId, request.name());
         try {
             Experiment experiment = experimentRepository.saveAndFlush(
@@ -53,7 +53,7 @@ public class ExperimentService {
 
     public ExperimentResponse getById(UUID projectId, UUID experimentId) {
         requireProject(projectId);
-        return mapper.toResponse(experimentRepository.findByIdAndProjectIdWithTags(experimentId, projectId)
+        return mapper.toResponse(experimentRepository.findWithTagsByIdAndProject_Id(experimentId, projectId)
                 .orElseThrow(() -> new ExperimentNotFoundException(experimentId)));
     }
 
@@ -61,15 +61,15 @@ public class ExperimentService {
         requireProject(projectId);
         Page<Experiment> page = tagId == null
                 ? experimentRepository.findByProject_Id(projectId, pageable)
-                : experimentRepository.findByProjectAndTag(projectId, tagId, pageable);
+                : experimentRepository.findByProject_IdAndTags_Id(projectId, tagId, pageable);
         // Mapping happens inside this transaction; @BatchSize loads lazy tags in batches.
         return page.map(mapper::toResponse);
     }
 
     @Transactional
     public ExperimentResponse update(UUID projectId, UUID experimentId, CreateExperimentRequest request) {
-        lockProject(projectId);
-        Experiment experiment = lockExperiment(projectId, experimentId);
+        findProject(projectId);
+        Experiment experiment = findExperiment(projectId, experimentId);
         if (!experiment.getName().equals(request.name())) {
             requireNameFree(projectId, request.name());
             experiment.setName(request.name());
@@ -85,8 +85,8 @@ public class ExperimentService {
 
     @Transactional
     public ExperimentResponse addTag(UUID projectId, UUID experimentId, UUID tagId) {
-        lockProject(projectId);
-        Experiment experiment = lockExperiment(projectId, experimentId);
+        findProject(projectId);
+        Experiment experiment = findExperiment(projectId, experimentId);
         Tag tag = requireTag(tagId);
         experiment.addTag(tag);
         experimentRepository.flush();
@@ -95,8 +95,8 @@ public class ExperimentService {
 
     @Transactional
     public ExperimentResponse removeTag(UUID projectId, UUID experimentId, UUID tagId) {
-        lockProject(projectId);
-        Experiment experiment = lockExperiment(projectId, experimentId);
+        findProject(projectId);
+        Experiment experiment = findExperiment(projectId, experimentId);
         Tag tag = requireTag(tagId);
         experiment.removeTag(tag);
         experimentRepository.flush();
@@ -105,8 +105,8 @@ public class ExperimentService {
 
     @Transactional
     public void delete(UUID projectId, UUID experimentId) {
-        lockProject(projectId);
-        Experiment experiment = lockExperiment(projectId, experimentId);
+        findProject(projectId);
+        Experiment experiment = findExperiment(projectId, experimentId);
         try {
             experimentRepository.delete(experiment);
             experimentRepository.flush();
@@ -124,13 +124,13 @@ public class ExperimentService {
         }
     }
 
-    private Project lockProject(UUID projectId) {
-        return projectRepository.findByIdForUpdate(projectId)
+    private Project findProject(UUID projectId) {
+        return projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
     }
 
-    private Experiment lockExperiment(UUID projectId, UUID experimentId) {
-        return experimentRepository.findByIdAndProjectIdForUpdate(experimentId, projectId)
+    private Experiment findExperiment(UUID projectId, UUID experimentId) {
+        return experimentRepository.findByIdAndProject_Id(experimentId, projectId)
                 .orElseThrow(() -> new ExperimentNotFoundException(experimentId));
     }
 

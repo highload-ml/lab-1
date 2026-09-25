@@ -69,7 +69,7 @@ public class RunController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "404", description = "Experiment not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public RunSliceResponse findAll(
+    public ResponseEntity<RunSliceResponse> findAll(
             @PathVariable UUID experimentId,
             @Parameter(description = "Opaque cursor from the preceding response")
             @RequestParam(required = false) String after,
@@ -82,7 +82,7 @@ public class RunController {
                 ? RunCursorCodec.encode(experimentId, new RunCursor(slice.getContent().getLast().createdAt(),
                         slice.getContent().getLast().id()))
                 : null;
-        return new RunSliceResponse(slice.getContent(), slice.hasNext(), nextCursor);
+        return ResponseEntity.ok(new RunSliceResponse(slice.getContent(), slice.hasNext(), nextCursor));
     }
 
     @GetMapping("/runs/{runId}")
@@ -90,8 +90,9 @@ public class RunController {
     @ApiResponse(responseCode = "200", description = "Run found")
     @ApiResponse(responseCode = "404", description = "Run not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public RunResponse getById(@PathVariable UUID runId) {
-        return runService.getById(runId);
+    public ResponseEntity<RunResponse> getById(@PathVariable UUID runId) {
+        RunResponse run = runService.getById(runId);
+        return ResponseEntity.ok(run);
     }
 
     @PostMapping("/runs/{runId}/start")
@@ -101,8 +102,9 @@ public class RunController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Invalid status transition",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public RunResponse start(@PathVariable UUID runId) {
-        return runService.start(runId);
+    public ResponseEntity<RunResponse> start(@PathVariable UUID runId) {
+        RunResponse run = runService.start(runId);
+        return ResponseEntity.ok(run);
     }
 
     @PostMapping("/runs/{runId}/complete")
@@ -112,8 +114,9 @@ public class RunController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Invalid status transition",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public RunResponse complete(@PathVariable UUID runId) {
-        return runService.complete(runId);
+    public ResponseEntity<RunResponse> complete(@PathVariable UUID runId) {
+        RunResponse run = runService.complete(runId);
+        return ResponseEntity.ok(run);
     }
 
     @PostMapping("/runs/{runId}/fail")
@@ -123,7 +126,8 @@ public class RunController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Invalid status transition",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public RunResponse fail(@PathVariable UUID runId) {
-        return runService.fail(runId);
+    public ResponseEntity<RunResponse> fail(@PathVariable UUID runId) {
+        RunResponse run = runService.fail(runId);
+        return ResponseEntity.ok(run);
     }
 }

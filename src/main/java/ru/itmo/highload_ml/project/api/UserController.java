@@ -65,8 +65,9 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "404", description = "User not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public UserResponse getById(@PathVariable UUID id) {
-        return userService.getById(id);
+    public ResponseEntity<UserResponse> getById(@PathVariable UUID id) {
+        UserResponse user = userService.getById(id);
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping
@@ -97,8 +98,9 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "Nickname already taken",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
-        return userService.update(id, request);
+    public ResponseEntity<UserResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        UserResponse updateUser = userService.update(id, request);
+        return ResponseEntity.ok(updateUser);
     }
 
     @DeleteMapping("/{id}")

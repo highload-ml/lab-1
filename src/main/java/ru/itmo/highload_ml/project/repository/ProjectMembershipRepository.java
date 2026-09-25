@@ -4,9 +4,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import ru.itmo.highload_ml.project.model.ProjectMembership;
 import ru.itmo.highload_ml.project.model.ProjectMembershipId;
 import ru.itmo.highload_ml.project.model.ProjectRole;
@@ -26,7 +23,5 @@ public interface ProjectMembershipRepository extends JpaRepository<ProjectMember
 
     boolean existsByIdUserId(UUID userId);
 
-    @Modifying
-    @Query("delete from ProjectMembership m where m.id.projectId = :projectId")
-    void deleteAllByProjectId(@Param("projectId") UUID projectId);
+    void deleteAllByIdProjectId(UUID projectId);
 }

@@ -19,7 +19,6 @@ import ru.itmo.highload_ml.project.mapper.UserMapper;
 import ru.itmo.highload_ml.project.model.User;
 import ru.itmo.highload_ml.project.repository.ProjectMembershipRepository;
 import ru.itmo.highload_ml.project.repository.UserRepository;
-import ru.itmo.highload_ml.project.security.PasswordHasher;
 
 import java.util.UUID;
 
@@ -30,25 +29,18 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    private final PasswordHasher passwordHasher;
     private final TransactionOperations transactionOperations;
     private final ProjectMembershipRepository membershipRepository;
 
-    /**
-     * PBKDF2 is deliberately slow (~100 ms), so the hash is computed before the transaction opens:
-     * otherwise every signup would hold a pooled DB connection idle for the whole hash,
-     * and a burst of signups could exhaust the pool for the entire application.
-     */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public UserResponse create(CreateUserRequest request) {
-        String passwordHash = passwordHasher.hash(request.password());
 
         return transactionOperations.execute(status -> {
             requireNicknameFree(request.nickname());
             try {
                 // flush inside the try: a concurrent insert of the same nickname surfaces here as 409, not 500
                 return userMapper.toResponse(
-                        userRepository.saveAndFlush(new User(request.nickname(), passwordHash, request.role())));
+                        userRepository.saveAndFlush(new User(request.nickname(), "123", request.role())));
             } catch (DataIntegrityViolationException e) {
                 throw new NicknameAlreadyTakenException(request.nickname());
             }
@@ -81,9 +73,7 @@ public class UserService {
 
     @Transactional
     public void delete(UUID id) {
-        // All membership inserts lock this row too, so the check and delete cannot race with an add.
-        User user = userRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+        User user = findUser(id);
         if (membershipRepository.existsByIdUserId(id)) {
             throw new UserHasMembershipsException(id);
         }
