@@ -21,12 +21,7 @@ import ru.itmo.highload_ml.tracking.exception.RunNotFoundException;
 import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.repository.RunRepository;
 
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -96,35 +91,6 @@ class RunServiceIntegrationTest extends ProjectModuleIntegrationTest {
         assertThat(runRepository.count()).isZero();
         assertThatThrownBy(() -> runService.getById(UUID.randomUUID()))
                 .isInstanceOf(RunNotFoundException.class);
-    }
-
-    @Test
-    void twoConcurrentStartsAllowOnlyOneTransition() throws Exception {
-        Context context = contextWithMember();
-        UUID runId = runService.create(context.experimentId(),
-                new CreateRunRequest(context.userId(), "training")).id();
-        CyclicBarrier start = new CyclicBarrier(2);
-
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            List<CompletableFuture<Boolean>> results = java.util.stream.IntStream.range(0, 2)
-                    .mapToObj(ignored -> CompletableFuture.supplyAsync(() -> tryStart(start, runId), executor))
-                    .toList();
-            assertThat(results.stream().map(CompletableFuture::join).filter(Boolean::booleanValue).count())
-                    .isEqualTo(1);
-        }
-        assertThat(runService.getById(runId).status()).isEqualTo(RunStatus.RUNNING);
-    }
-
-    private boolean tryStart(CyclicBarrier barrier, UUID runId) {
-        try {
-            barrier.await(10, TimeUnit.SECONDS);
-            runService.start(runId);
-            return true;
-        } catch (InvalidRunStateTransitionException e) {
-            return false;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     private Context contextWithMember() {

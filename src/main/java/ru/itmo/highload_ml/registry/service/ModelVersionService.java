@@ -1,7 +1,5 @@
 package ru.itmo.highload_ml.registry.service;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,8 +30,6 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ModelVersionService {
 
-    private static final String ARTIFACT_UNIQUE_CONSTRAINT = "uk_model_versions_artifact";
-
     private final ProjectAccessPort projectAccessPort;
     private final ExperimentAccessPort experimentAccessPort;
     private final ArtifactLookupPort artifactLookupPort;
@@ -52,7 +48,6 @@ public class ModelVersionService {
         this.mapper = mapper;
     }
 
-    /** The counter upsert serializes registrations in a project; the insert and counter advance commit together. */
     @Transactional
     public ModelVersionResponse register(UUID projectId, RegisterModelVersionRequest request) {
         projectAccessPort.requireMember(projectId, request.userId());
@@ -71,15 +66,8 @@ public class ModelVersionService {
         if (repository.existsByArtifactId(request.artifactId())) {
             throw new ModelArtifactAlreadyRegisteredException(request.artifactId());
         }
-        try {
-            return mapper.toResponse(repository.saveAndFlush(
-                    new ModelVersion(projectId, request.artifactId(), version)));
-        } catch (DataIntegrityViolationException e) {
-            if (hasConstraint(e, ARTIFACT_UNIQUE_CONSTRAINT)) {
-                throw new ModelArtifactAlreadyRegisteredException(request.artifactId());
-            }
-            throw e;
-        }
+        return mapper.toResponse(repository.saveAndFlush(
+                new ModelVersion(projectId, request.artifactId(), version)));
     }
 
     public ModelVersionResponse getById(UUID projectId, UUID versionId) {
@@ -99,26 +87,20 @@ public class ModelVersionService {
                 .orElseThrow(() -> new ModelVersionNotFoundException(projectId, "production")));
     }
 
-    /** Locks the version row, so concurrent stage/promote calls cannot skip a state transition. */
     @Transactional
     public ModelVersionResponse stage(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
-        ModelVersion version = lockVersion(projectId, versionId);
+        ModelVersion version = requireVersion(projectId, versionId);
         version.stage();
         repository.flush();
         return mapper.toResponse(version);
     }
 
-    /** Project lock serializes promotions; archiving and promotion are one atomic transaction. */
+    /** Archiving the current version and promoting the target are one transaction. */
     @Transactional
     public ModelVersionResponse promoteToProduction(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
-        if (!repository.existsByIdAndProjectId(versionId, projectId)) {
-            throw new ModelVersionNotFoundException(versionId);
-        }
-        // Every registered version has a counter row. Lock it before reading production or the target.
-        counter.lock(projectId);
-        ModelVersion target = lockVersion(projectId, versionId);
+        ModelVersion target = requireVersion(projectId, versionId);
         if (target.getState() != ModelVersionState.STAGING) {
             throw new InvalidModelVersionTransitionException(
                     versionId, target.getState(), ModelVersionState.PRODUCTION);
@@ -135,18 +117,8 @@ public class ModelVersionService {
         return mapper.toResponse(target);
     }
 
-    private ModelVersion lockVersion(UUID projectId, UUID versionId) {
-        return repository.findByIdAndProjectIdForUpdate(versionId, projectId)
+    private ModelVersion requireVersion(UUID projectId, UUID versionId) {
+        return repository.findByIdAndProjectId(versionId, projectId)
                 .orElseThrow(() -> new ModelVersionNotFoundException(versionId));
-    }
-
-    private static boolean hasConstraint(Throwable error, String constraintName) {
-        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && constraintName.equals(violation.getConstraintName())) {
-                return true;
-            }
-        }
-        return false;
     }
 }

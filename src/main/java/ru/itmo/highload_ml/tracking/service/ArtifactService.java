@@ -1,7 +1,5 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,8 +23,6 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ArtifactService {
 
-    private static final String UNIQUE_NAME_CONSTRAINT = "uk_artifacts_run_name";
-
     private final RunRepository runRepository;
     private final ArtifactRepository artifactRepository;
     private final ArtifactMapper mapper;
@@ -37,26 +33,18 @@ public class ArtifactService {
         this.mapper = mapper;
     }
 
-    /** The run lock serializes artifact registration with completion and failure transitions. */
     @Transactional
     public ArtifactResponse register(UUID runId, CreateArtifactRequest request) {
-        Run run = runRepository.findByIdForUpdate(runId).orElseThrow(() -> new RunNotFoundException(runId));
+        Run run = runRepository.findById(runId).orElseThrow(() -> new RunNotFoundException(runId));
         if (run.getStatus() != RunStatus.RUNNING) {
             throw new RunNotAcceptingArtifactsException(runId, run.getStatus());
         }
         if (artifactRepository.existsByRun_IdAndName(runId, request.name())) {
             throw new ArtifactNameAlreadyTakenException(runId, request.name());
         }
-        try {
-            Artifact artifact = artifactRepository.saveAndFlush(new Artifact(
-                    run, request.name(), request.type(), request.path(), request.sizeBytes()));
-            return mapper.toResponse(artifact);
-        } catch (DataIntegrityViolationException e) {
-            if (hasConstraint(e, UNIQUE_NAME_CONSTRAINT)) {
-                throw new ArtifactNameAlreadyTakenException(runId, request.name());
-            }
-            throw e;
-        }
+        Artifact artifact = artifactRepository.saveAndFlush(new Artifact(
+                run, request.name(), request.type(), request.path(), request.sizeBytes()));
+        return mapper.toResponse(artifact);
     }
 
     public ArtifactResponse getById(UUID runId, UUID artifactId) {
@@ -76,13 +64,4 @@ public class ArtifactService {
         }
     }
 
-    private static boolean hasConstraint(Throwable error, String constraintName) {
-        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && constraintName.equals(violation.getConstraintName())) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

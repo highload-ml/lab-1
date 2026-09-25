@@ -1,24 +1,16 @@
 package ru.itmo.highload_ml.tracking.repository;
 
-import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.itmo.highload_ml.tracking.model.Run;
 
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface RunRepository extends JpaRepository<Run, UUID> {
-
-    /** Must be called inside a transaction shared with the subsequent state change or child insert. */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select r from Run r where r.id = :id")
-    Optional<Run> findByIdForUpdate(@Param("id") UUID id);
 
     boolean existsByExperimentId(UUID experimentId);
 

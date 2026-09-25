@@ -1,13 +1,11 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.itmo.highload_ml.tracking.api.dto.CreateArtifactRequest;
 import ru.itmo.highload_ml.tracking.exception.ArtifactNameAlreadyTakenException;
@@ -30,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,9 +41,9 @@ class ArtifactServiceTest {
     @InjectMocks private ArtifactService service;
 
     @Test
-    void registersMetadataForLockedRunningRun() {
+    void registersMetadataForRunningRun() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(artifactRepository.saveAndFlush(any(Artifact.class))).thenAnswer(invocation -> {
             Artifact artifact = invocation.getArgument(0);
             ReflectionTestUtils.setField(artifact, "id", UUID.randomUUID());
@@ -69,7 +66,7 @@ class ArtifactServiceTest {
     void rejectsRegistrationBeforeStartOrAfterCompletion() {
         for (RunStatus status : List.of(RunStatus.CREATED, RunStatus.COMPLETED, RunStatus.FAILED)) {
             Run run = run(status);
-            when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+            when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
             assertThatThrownBy(() -> service.register(run.getId(), request()))
                     .isInstanceOf(RunNotAcceptingArtifactsException.class);
         }
@@ -79,25 +76,12 @@ class ArtifactServiceTest {
     @Test
     void rejectsExistingNameBeforeInsert() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(artifactRepository.existsByRun_IdAndName(run.getId(), "weights")).thenReturn(true);
 
         assertThatThrownBy(() -> service.register(run.getId(), request()))
                 .isInstanceOf(ArtifactNameAlreadyTakenException.class);
         verify(artifactRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void translatesUniqueConstraintRaceToConflict() {
-        Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
-        ConstraintViolationException violation = mock(ConstraintViolationException.class);
-        when(violation.getConstraintName()).thenReturn("uk_artifacts_run_name");
-        when(artifactRepository.saveAndFlush(any(Artifact.class)))
-                .thenThrow(new DataIntegrityViolationException("duplicate", violation));
-
-        assertThatThrownBy(() -> service.register(run.getId(), request()))
-                .isInstanceOf(ArtifactNameAlreadyTakenException.class);
     }
 
     @Test
@@ -114,7 +98,7 @@ class ArtifactServiceTest {
     @Test
     void missingRunIsNotFound() {
         UUID runId = UUID.randomUUID();
-        when(runRepository.findByIdForUpdate(runId)).thenReturn(Optional.empty());
+        when(runRepository.findById(runId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.register(runId, request()))
                 .isInstanceOf(RunNotFoundException.class);

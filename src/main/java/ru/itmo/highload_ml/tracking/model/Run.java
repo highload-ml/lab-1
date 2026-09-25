@@ -110,7 +110,7 @@ public class Run {
         return artifacts;
     }
 
-    // Transition validation and row locking belong to RunService, not to JPA mapping.
+    // Transition validation belongs to RunService, not to JPA mapping.
     public void setStatus(RunStatus status) {
         this.status = status;
     }
