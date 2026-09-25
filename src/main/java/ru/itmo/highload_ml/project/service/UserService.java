@@ -1,7 +1,6 @@
 package ru.itmo.highload_ml.project.service;
-import lombok.RequiredArgsConstructor;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,10 +37,11 @@ public class UserService {
      * PBKDF2 is deliberately slow (~100 ms), so the hash is computed before the transaction opens:
      * otherwise every signup would hold a pooled DB connection idle for the whole hash,
      * and a burst of signups could exhaust the pool for the entire application.
+     * The password is optional: users registered by nickname only get no hash.
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public UserResponse create(CreateUserRequest request) {
-        String passwordHash = passwordHasher.hash(request.password());
+        String passwordHash = request.password() == null ? null : passwordHasher.hash(request.password());
 
         return transactionOperations.execute(status -> {
             requireNicknameFree(request.nickname());
@@ -57,6 +57,11 @@ public class UserService {
 
     public UserResponse getById(UUID id) {
         return userMapper.toResponse(findUser(id));
+    }
+
+    public UserResponse getByNickname(String nickname) {
+        return userMapper.toResponse(userRepository.findByNickname(nickname)
+                .orElseThrow(() -> new UserNotFoundException(nickname)));
     }
 
     public Page<UserResponse> findAll(Pageable pageable) {

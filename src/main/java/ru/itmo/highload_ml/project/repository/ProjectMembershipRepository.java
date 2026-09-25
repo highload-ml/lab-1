@@ -22,6 +22,10 @@ public interface ProjectMembershipRepository extends JpaRepository<ProjectMember
     @EntityGraph(attributePaths = "user")
     Optional<ProjectMembership> findWithUserById(ProjectMembershipId id);
 
+    // The project is fetched in the same query, so a page of memberships costs one select plus one count.
+    @EntityGraph(attributePaths = "project")
+    Page<ProjectMembership> findByIdUserId(UUID userId, Pageable pageable);
+
     long countByIdProjectIdAndRole(UUID projectId, ProjectRole role);
 
     boolean existsByIdUserId(UUID userId);

@@ -33,7 +33,8 @@ public class User {
     @Setter
     private String nickname;
 
-    @Column(name = "password_hash", nullable = false)
+    // null for users registered by nickname only
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)

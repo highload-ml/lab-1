@@ -49,6 +49,33 @@ class UserControllerIntegrationTest extends ProjectModuleIntegrationTest {
     }
 
     @Test
+    void createWithoutPasswordReturns201AndStoresNoHash() throws Exception {
+        mockMvc.perform(post(USERS).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nickname": "alice", "role": "ML_ENGINEER"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.nickname").value("alice"));
+
+        assertThat(userRepository.findByNickname("alice")).get()
+                .satisfies(user -> assertThat(user.getPasswordHash()).isNull());
+    }
+
+    @Test
+    void getByNicknameReturnsUserOr404() throws Exception {
+        createUser("alice", "REVIEWER");
+
+        mockMvc.perform(get(USERS + "/by-nickname/alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("alice"))
+                .andExpect(jsonPath("$.role").value("REVIEWER"))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+        mockMvc.perform(get(USERS + "/by-nickname/ghost"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("User with nickname 'ghost' not found"));
+    }
+
+    @Test
     void createdUserIsReachableByLocation() throws Exception {
         String location = createUser("alice", "REVIEWER");
 

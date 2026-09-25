@@ -75,6 +75,38 @@ class UserServiceTest {
     }
 
     @Test
+    void createWithoutPasswordStoresNoHash() {
+        when(userRepository.existsByNickname("alice")).thenReturn(false);
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.create(new CreateUserRequest("alice", null, UserRole.ML_ENGINEER));
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(saved.capture());
+        assertThat(saved.getValue().getPasswordHash()).isNull();
+        verify(passwordHasher, never()).hash(any());
+    }
+
+    @Test
+    void getByNicknameReturnsUser() {
+        when(userRepository.findByNickname("alice")).thenReturn(Optional.of(new User("alice", null, UserRole.REVIEWER)));
+
+        UserResponse response = userService.getByNickname("alice");
+
+        assertThat(response.nickname()).isEqualTo("alice");
+        assertThat(response.role()).isEqualTo(UserRole.REVIEWER);
+    }
+
+    @Test
+    void getByNicknameThrowsWhenMissing() {
+        when(userRepository.findByNickname("ghost")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getByNickname("ghost"))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("ghost");
+    }
+
+    @Test
     void createRejectsTakenNickname() {
         when(userRepository.existsByNickname("alice")).thenReturn(true);
 
