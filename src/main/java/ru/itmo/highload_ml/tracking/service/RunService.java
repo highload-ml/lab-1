@@ -1,12 +1,10 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.itmo.highload_ml.project.exception.ExperimentNotFoundException;
 import ru.itmo.highload_ml.project.port.ExperimentAccessPort;
 import ru.itmo.highload_ml.project.port.ProjectAccessPort;
 import ru.itmo.highload_ml.tracking.api.dto.CreateRunRequest;
@@ -24,37 +22,20 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class RunService {
-
-    private static final String EXPERIMENT_FK = "fk_runs_experiment";
 
     private final ExperimentAccessPort experimentAccessPort;
     private final ProjectAccessPort projectAccessPort;
     private final RunRepository runRepository;
     private final RunMapper mapper;
 
-    public RunService(ExperimentAccessPort experimentAccessPort, ProjectAccessPort projectAccessPort,
-                      RunRepository runRepository, RunMapper mapper) {
-        this.experimentAccessPort = experimentAccessPort;
-        this.projectAccessPort = projectAccessPort;
-        this.runRepository = runRepository;
-        this.mapper = mapper;
-    }
-
-    /** Check project membership before insertion; the database FK protects a concurrent experiment delete. */
     @Transactional
     public RunResponse create(UUID experimentId, CreateRunRequest request) {
         UUID projectId = experimentAccessPort.getProjectId(experimentId);
         projectAccessPort.requireMember(projectId, request.authorId());
-        try {
-            Run run = runRepository.saveAndFlush(new Run(experimentId, request.authorId(), request.name()));
-            return mapper.toResponse(run);
-        } catch (DataIntegrityViolationException e) {
-            if (hasConstraint(e, EXPERIMENT_FK)) {
-                throw new ExperimentNotFoundException(experimentId);
-            }
-            throw e;
-        }
+        Run run = runRepository.saveAndFlush(new Run(experimentId, request.authorId(), request.name()));
+        return mapper.toResponse(run);
     }
 
     public RunResponse getById(UUID runId) {
@@ -70,10 +51,9 @@ public class RunService {
         return runs.map(mapper::toResponse);
     }
 
-    /** The run row lock serializes this transition with other transitions and future metric/artifact writes. */
     @Transactional
     public RunResponse start(UUID runId) {
-        Run run = lockRun(runId);
+        Run run = requireRun(runId);
         requireStatus(run, RunStatus.CREATED, RunStatus.RUNNING);
         run.setStartedAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
         run.setStatus(RunStatus.RUNNING);
@@ -92,7 +72,7 @@ public class RunService {
     }
 
     private RunResponse finish(UUID runId, RunStatus target) {
-        Run run = lockRun(runId);
+        Run run = requireRun(runId);
         requireStatus(run, RunStatus.RUNNING, target);
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         // Keep the database invariant even if the system clock moves backwards between transitions.
@@ -102,8 +82,8 @@ public class RunService {
         return mapper.toResponse(run);
     }
 
-    private Run lockRun(UUID runId) {
-        return runRepository.findByIdForUpdate(runId)
+    private Run requireRun(UUID runId) {
+        return runRepository.findById(runId)
                 .orElseThrow(() -> new RunNotFoundException(runId));
     }
 
@@ -113,13 +93,4 @@ public class RunService {
         }
     }
 
-    private static boolean hasConstraint(Throwable error, String constraintName) {
-        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && constraintName.equals(violation.getConstraintName())) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

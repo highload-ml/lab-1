@@ -1,7 +1,6 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,26 +27,19 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MetricService {
-
-    private static final String UNIQUE_METRIC_CONSTRAINT = "uk_metrics_run_name_step";
 
     private final RunRepository runRepository;
     private final MetricRepository metricRepository;
     private final MetricMapper mapper;
-
-    public MetricService(RunRepository runRepository, MetricRepository metricRepository, MetricMapper mapper) {
-        this.runRepository = runRepository;
-        this.metricRepository = metricRepository;
-        this.mapper = mapper;
-    }
 
     @Transactional
     public MetricResponse log(UUID runId, CreateMetricRequest request) {
         return persistBatch(runId, List.of(request)).getFirst();
     }
 
-    /** All metrics in a batch commit or roll back together; the run lock excludes concurrent completion. */
+    /** All metrics in a batch commit or roll back together. */
     @Transactional
     public List<MetricResponse> logBatch(UUID runId, CreateMetricsRequest request) {
         return persistBatch(runId, request.metrics());
@@ -65,7 +57,7 @@ public class MetricService {
     }
 
     private List<MetricResponse> persistBatch(UUID runId, List<CreateMetricRequest> requests) {
-        Run run = runRepository.findByIdForUpdate(runId).orElseThrow(() -> new RunNotFoundException(runId));
+        Run run = runRepository.findById(runId).orElseThrow(() -> new RunNotFoundException(runId));
         if (run.getStatus() != RunStatus.RUNNING) {
             throw new RunNotRunningException(runId, run.getStatus());
         }
@@ -80,24 +72,7 @@ public class MetricService {
             metrics.add(new Metric(run, request.name(), request.value(), request.step()));
         }
 
-        try {
-            return metricRepository.saveAllAndFlush(metrics).stream().map(mapper::toResponse).toList();
-        } catch (DataIntegrityViolationException e) {
-            if (hasConstraint(e, UNIQUE_METRIC_CONSTRAINT)) {
-                throw new DuplicateMetricException(runId);
-            }
-            throw e;
-        }
-    }
-
-    private static boolean hasConstraint(Throwable error, String constraintName) {
-        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && constraintName.equals(violation.getConstraintName())) {
-                return true;
-            }
-        }
-        return false;
+        return metricRepository.saveAllAndFlush(metrics).stream().map(mapper::toResponse).toList();
     }
 
     private void requireRun(UUID runId) {

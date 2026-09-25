@@ -9,6 +9,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import ru.itmo.highload_ml.registry.exception.InvalidModelVersionTransitionException;
 
 import java.time.Instant;
@@ -17,6 +20,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "model_versions")
+@Getter
+@NoArgsConstructor()
 public class ModelVersion {
 
     @Id
@@ -41,9 +46,6 @@ public class ModelVersion {
 
     @Column(name = "promoted_at")
     private Instant promotedAt;
-
-    protected ModelVersion() {
-    }
 
     public ModelVersion(UUID projectId, UUID artifactId, long version) {
         this.projectId = projectId;
@@ -78,33 +80,5 @@ public class ModelVersion {
         if (state != expected) {
             throw new InvalidModelVersionTransitionException(id, state, target);
         }
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public UUID getProjectId() {
-        return projectId;
-    }
-
-    public UUID getArtifactId() {
-        return artifactId;
-    }
-
-    public long getVersion() {
-        return version;
-    }
-
-    public ModelVersionState getState() {
-        return state;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getPromotedAt() {
-        return promotedAt;
     }
 }

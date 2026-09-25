@@ -1,13 +1,11 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.itmo.highload_ml.tracking.api.dto.CreateMetricRequest;
 import ru.itmo.highload_ml.tracking.api.dto.CreateMetricsRequest;
@@ -30,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,9 +41,9 @@ class MetricServiceTest {
     @InjectMocks private MetricService service;
 
     @Test
-    void logsSingleMetricAgainstLockedRunningRun() {
+    void logsSingleMetricAgainstRunningRun() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(metricRepository.saveAllAndFlush(anyList())).thenAnswer(invocation -> {
             List<Metric> metrics = invocation.getArgument(0);
             metrics.forEach(metric -> {
@@ -70,7 +67,7 @@ class MetricServiceTest {
     void rejectsCreatedOrCompletedRunWithoutSaving() {
         for (RunStatus status : List.of(RunStatus.CREATED, RunStatus.COMPLETED, RunStatus.FAILED)) {
             Run run = run(status);
-            when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+            when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
             assertThatThrownBy(() -> service.log(run.getId(), metric("accuracy", 1)))
                     .isInstanceOf(RunNotRunningException.class);
         }
@@ -80,7 +77,7 @@ class MetricServiceTest {
     @Test
     void rejectsDuplicateInsideBatchBeforeWriting() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
 
         assertThatThrownBy(() -> service.logBatch(run.getId(),
                 new CreateMetricsRequest(List.of(metric("accuracy", 1), metric("accuracy", 1)))))
@@ -91,7 +88,7 @@ class MetricServiceTest {
     @Test
     void rejectsMetricAlreadyStoredInDatabase() {
         Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
+        when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(metricRepository.existsByRun_IdAndNameAndStep(run.getId(), "accuracy", 1)).thenReturn(true);
 
         assertThatThrownBy(() -> service.log(run.getId(), metric("accuracy", 1)))
@@ -100,22 +97,9 @@ class MetricServiceTest {
     }
 
     @Test
-    void translatesUniqueConstraintRaceToConflict() {
-        Run run = run(RunStatus.RUNNING);
-        when(runRepository.findByIdForUpdate(run.getId())).thenReturn(Optional.of(run));
-        ConstraintViolationException violation = mock(ConstraintViolationException.class);
-        when(violation.getConstraintName()).thenReturn("uk_metrics_run_name_step");
-        when(metricRepository.saveAllAndFlush(anyList()))
-                .thenThrow(new DataIntegrityViolationException("duplicate", violation));
-
-        assertThatThrownBy(() -> service.log(run.getId(), metric("accuracy", 1)))
-                .isInstanceOf(DuplicateMetricException.class);
-    }
-
-    @Test
     void missingRunIsNotFound() {
         UUID runId = UUID.randomUUID();
-        when(runRepository.findByIdForUpdate(runId)).thenReturn(Optional.empty());
+        when(runRepository.findById(runId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.log(runId, metric("accuracy", 1)))
                 .isInstanceOf(RunNotFoundException.class);

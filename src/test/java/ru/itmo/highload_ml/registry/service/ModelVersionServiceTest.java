@@ -104,7 +104,7 @@ class ModelVersionServiceTest {
     @Test
     void stageRequiresNewVersion() {
         ModelVersion version = version();
-        when(repository.findByIdAndProjectIdForUpdate(version.getId(), projectId))
+        when(repository.findByIdAndProjectId(version.getId(), projectId))
                 .thenReturn(Optional.of(version));
 
         assertThat(service.stage(projectId, version.getId(), userId).state())
@@ -121,8 +121,7 @@ class ModelVersionServiceTest {
         old.promote(Instant.now().minusSeconds(10));
         ModelVersion target = version();
         target.stage();
-        when(repository.existsByIdAndProjectId(target.getId(), projectId)).thenReturn(true);
-        when(repository.findByIdAndProjectIdForUpdate(target.getId(), projectId))
+        when(repository.findByIdAndProjectId(target.getId(), projectId))
                 .thenReturn(Optional.of(target));
         when(repository.findByProjectIdAndState(projectId, ModelVersionState.PRODUCTION))
                 .thenReturn(Optional.of(old));
@@ -132,19 +131,18 @@ class ModelVersionServiceTest {
         assertThat(old.getState()).isEqualTo(ModelVersionState.ARCHIVED);
         assertThat(promoted.state()).isEqualTo(ModelVersionState.PRODUCTION);
         assertThat(promoted.promotedAt()).isNotNull();
-        var calls = inOrder(counter, repository);
-        calls.verify(counter).lock(projectId);
-        calls.verify(repository).findByIdAndProjectIdForUpdate(target.getId(), projectId);
+        var calls = inOrder(repository);
+        calls.verify(repository).findByIdAndProjectId(target.getId(), projectId);
         calls.verify(repository).findByProjectIdAndState(projectId, ModelVersionState.PRODUCTION);
         calls.verify(repository, times(2)).flush();
     }
 
     @Test
-    void promotionReturnsNotFoundBeforeTryingToLockMissingCounter() {
+    void promotionRejectsMissingVersion() {
         UUID missingId = UUID.randomUUID();
         assertThatThrownBy(() -> service.promoteToProduction(projectId, missingId, userId))
                 .isInstanceOf(ModelVersionNotFoundException.class);
-        verify(counter, never()).lock(any());
+        verify(repository).findByIdAndProjectId(missingId, projectId);
     }
 
     private RegisterModelVersionRequest request() {

@@ -66,8 +66,8 @@ public class ModelVersionController {
     @ApiResponse(responseCode = "200", description = "Version found")
     @ApiResponse(responseCode = "404", description = "Project or version not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ModelVersionResponse getById(@PathVariable UUID projectId, @PathVariable UUID versionId) {
-        return service.getById(projectId, versionId);
+    public ResponseEntity<ModelVersionResponse> getById(@PathVariable UUID projectId, @PathVariable UUID versionId) {
+        return ResponseEntity.ok(service.getById(projectId, versionId));
     }
 
     @GetMapping
@@ -91,8 +91,8 @@ public class ModelVersionController {
     @ApiResponse(responseCode = "200", description = "Production version found")
     @ApiResponse(responseCode = "404", description = "Project or production version not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ModelVersionResponse getProduction(@PathVariable UUID projectId) {
-        return service.getProduction(projectId);
+    public ResponseEntity<ModelVersionResponse> getProduction(@PathVariable UUID projectId) {
+        return ResponseEntity.ok(service.getProduction(projectId));
     }
 
     @PostMapping("/{versionId}/stage")
@@ -104,9 +104,9 @@ public class ModelVersionController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Member or state rule violated",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ModelVersionResponse stage(@PathVariable UUID projectId, @PathVariable UUID versionId,
-                                      @Valid @RequestBody ModelActionRequest request) {
-        return service.stage(projectId, versionId, request.userId());
+    public ResponseEntity<ModelVersionResponse> stage(@PathVariable UUID projectId, @PathVariable UUID versionId,
+                                                      @Valid @RequestBody ModelActionRequest request) {
+        return ResponseEntity.ok(service.stage(projectId, versionId, request.userId()));
     }
 
     @PostMapping("/{versionId}/promote")
@@ -118,8 +118,8 @@ public class ModelVersionController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "422", description = "Member or state rule violated",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    public ModelVersionResponse promote(@PathVariable UUID projectId, @PathVariable UUID versionId,
-                                        @Valid @RequestBody ModelActionRequest request) {
-        return service.promoteToProduction(projectId, versionId, request.userId());
+    public ResponseEntity<ModelVersionResponse> promote(@PathVariable UUID projectId, @PathVariable UUID versionId,
+                                                        @Valid @RequestBody ModelActionRequest request) {
+        return ResponseEntity.ok(service.promoteToProduction(projectId, versionId, request.userId()));
     }
 }

@@ -14,7 +14,7 @@ public class RegistryVersionCounter {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    /** One PostgreSQL upsert allocates a project-local version and serializes concurrent registrations. */
+    /** Allocates the next project-local version number. */
     public long allocate(UUID projectId) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO registry_version_counters (project_id, next_version)
@@ -25,11 +25,4 @@ public class RegistryVersionCounter {
                 """, Long.class, projectId);
     }
 
-    /** All promotions in one project hold this row lock until their transaction commits. */
-    public void lock(UUID projectId) {
-        jdbcTemplate.queryForObject("""
-                SELECT next_version FROM registry_version_counters
-                WHERE project_id = ? FOR UPDATE
-                """, Long.class, projectId);
-    }
 }

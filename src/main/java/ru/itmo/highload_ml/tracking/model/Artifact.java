@@ -12,6 +12,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -19,6 +22,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "artifacts")
+@Getter
+@NoArgsConstructor()
 public class Artifact {
 
     @Id
@@ -46,9 +51,6 @@ public class Artifact {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    protected Artifact() {
-    }
-
     public Artifact(Run run, String name, ArtifactType type, String path, long sizeBytes) {
         this.run = run;
         this.name = name;
@@ -62,33 +64,5 @@ public class Artifact {
         if (createdAt == null) {
             createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         }
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public Run getRun() {
-        return run;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public ArtifactType getType() {
-        return type;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public long getSizeBytes() {
-        return sizeBytes;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
     }
 }
