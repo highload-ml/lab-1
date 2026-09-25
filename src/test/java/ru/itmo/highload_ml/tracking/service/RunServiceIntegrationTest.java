@@ -21,7 +21,6 @@ import ru.itmo.highload_ml.tracking.exception.RunNotFoundException;
 import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.repository.RunRepository;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;

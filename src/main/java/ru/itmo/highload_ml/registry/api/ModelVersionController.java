@@ -67,8 +67,12 @@ public class ModelVersionController {
     @ApiResponse(responseCode = "404", description = "Project or version not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ModelVersionResponse> getById(@PathVariable UUID projectId, @PathVariable UUID versionId) {
+<<<<<<< HEAD
         ModelVersionResponse version = service.getById(projectId, versionId);
         return ResponseEntity.ok(version);
+=======
+        return ResponseEntity.ok(service.getById(projectId, versionId));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     @GetMapping
@@ -93,8 +97,12 @@ public class ModelVersionController {
     @ApiResponse(responseCode = "404", description = "Project or production version not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ModelVersionResponse> getProduction(@PathVariable UUID projectId) {
+<<<<<<< HEAD
         ModelVersionResponse production = service.getProduction(projectId);
         return ResponseEntity.ok(production);
+=======
+        return ResponseEntity.ok(service.getProduction(projectId));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     @PostMapping("/{versionId}/stage")
@@ -108,8 +116,12 @@ public class ModelVersionController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ModelVersionResponse> stage(@PathVariable UUID projectId, @PathVariable UUID versionId,
                                                       @Valid @RequestBody ModelActionRequest request) {
+<<<<<<< HEAD
         ModelVersionResponse staged = service.stage(projectId, versionId, request.userId());
         return ResponseEntity.ok(staged);
+=======
+        return ResponseEntity.ok(service.stage(projectId, versionId, request.userId()));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     @PostMapping("/{versionId}/promote")
@@ -123,7 +135,11 @@ public class ModelVersionController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ModelVersionResponse> promote(@PathVariable UUID projectId, @PathVariable UUID versionId,
                                                         @Valid @RequestBody ModelActionRequest request) {
+<<<<<<< HEAD
         ModelVersionResponse promoted = service.promoteToProduction(projectId, versionId, request.userId());
         return ResponseEntity.ok(promoted);
+=======
+        return ResponseEntity.ok(service.promoteToProduction(projectId, versionId, request.userId()));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 }

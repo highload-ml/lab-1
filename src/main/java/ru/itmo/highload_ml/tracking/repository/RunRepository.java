@@ -3,6 +3,11 @@ package ru.itmo.highload_ml.tracking.repository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+<<<<<<< HEAD
+=======
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
 import ru.itmo.highload_ml.tracking.model.Run;
 
 import java.time.Instant;

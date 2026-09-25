@@ -22,7 +22,6 @@ import ru.itmo.highload_ml.tracking.exception.ArtifactNotFoundException;
 import ru.itmo.highload_ml.tracking.exception.RunNotAcceptingArtifactsException;
 import ru.itmo.highload_ml.tracking.exception.RunNotFoundException;
 import ru.itmo.highload_ml.tracking.model.ArtifactType;
-import ru.itmo.highload_ml.tracking.model.RunStatus;
 import ru.itmo.highload_ml.tracking.repository.ArtifactRepository;
 
 import java.util.UUID;
@@ -106,4 +105,8 @@ class ArtifactServiceIntegrationTest extends ProjectModuleIntegrationTest {
     private static CreateArtifactRequest request() {
         return new CreateArtifactRequest("weights", ArtifactType.MODEL, "models/weights.bin", 1024L);
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
 }

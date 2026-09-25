@@ -67,8 +67,12 @@ public class ArtifactController {
     @ApiResponse(responseCode = "404", description = "Run or artifact not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<ArtifactResponse> getById(@PathVariable UUID runId, @PathVariable UUID artifactId) {
+<<<<<<< HEAD
         ArtifactResponse artifact = artifactService.getById(runId, artifactId);
         return ResponseEntity.ok(artifact);
+=======
+        return ResponseEntity.ok(artifactService.getById(runId, artifactId));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     @GetMapping

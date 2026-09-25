@@ -15,7 +15,6 @@ import ru.itmo.highload_ml.registry.model.ModelVersionState;
 import ru.itmo.highload_ml.registry.repository.ModelVersionRepository;
 import ru.itmo.highload_ml.tracking.model.ArtifactType;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,4 +97,8 @@ class ModelVersionServiceIntegrationTest extends RegistryModuleIntegrationTest {
     private ru.itmo.highload_ml.registry.api.dto.ModelVersionResponse register(Fixture fixture, UUID artifactId) {
         return service.register(fixture.projectId(), new RegisterModelVersionRequest(fixture.userId(), artifactId));
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
 }

@@ -159,6 +159,17 @@ class ModelVersionServiceTest {
         calls.verify(repository, times(2)).flush();
     }
 
+<<<<<<< HEAD
+=======
+    @Test
+    void promotionRejectsMissingVersion() {
+        UUID missingId = UUID.randomUUID();
+        assertThatThrownBy(() -> service.promoteToProduction(projectId, missingId, userId))
+                .isInstanceOf(ModelVersionNotFoundException.class);
+        verify(repository).findByIdAndProjectId(missingId, projectId);
+    }
+
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     private RegisterModelVersionRequest request() {
         return new RegisterModelVersionRequest(userId, artifactId);
     }

@@ -86,8 +86,12 @@ public class MetricController {
     @ApiResponse(responseCode = "404", description = "Run or metric not found",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public ResponseEntity<MetricResponse> getById(@PathVariable UUID runId, @PathVariable UUID metricId) {
+<<<<<<< HEAD
         MetricResponse metric = metricService.getById(runId, metricId);
         return ResponseEntity.ok(metric);
+=======
+        return ResponseEntity.ok(metricService.getById(runId, metricId));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     @GetMapping

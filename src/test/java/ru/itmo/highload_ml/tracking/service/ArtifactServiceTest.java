@@ -1,13 +1,11 @@
 package ru.itmo.highload_ml.tracking.service;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.itmo.highload_ml.tracking.api.dto.CreateArtifactRequest;
 import ru.itmo.highload_ml.tracking.exception.ArtifactNameAlreadyTakenException;
@@ -30,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,7 +41,7 @@ class ArtifactServiceTest {
     @InjectMocks private ArtifactService service;
 
     @Test
-    void registersMetadataForLockedRunningRun() {
+    void registersMetadataForRunningRun() {
         Run run = run(RunStatus.RUNNING);
         when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
         when(artifactRepository.saveAndFlush(any(Artifact.class))).thenAnswer(invocation -> {
@@ -88,6 +85,7 @@ class ArtifactServiceTest {
     }
 
     @Test
+<<<<<<< HEAD
     void translatesUniqueConstraintRaceToConflict() {
         Run run = run(RunStatus.RUNNING);
         when(runRepository.findById(run.getId())).thenReturn(Optional.of(run));
@@ -101,6 +99,8 @@ class ArtifactServiceTest {
     }
 
     @Test
+=======
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     void readsArtifactOnlyThroughItsOwnRun() {
         Run run = run(RunStatus.RUNNING);
         UUID artifactId = UUID.randomUUID();

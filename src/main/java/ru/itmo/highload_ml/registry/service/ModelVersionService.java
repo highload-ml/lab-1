@@ -1,7 +1,6 @@
 package ru.itmo.highload_ml.registry.service;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,9 +30,8 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class ModelVersionService {
-
-    private static final String ARTIFACT_UNIQUE_CONSTRAINT = "uk_model_versions_artifact";
 
     private final ProjectAccessPort projectAccessPort;
     private final ExperimentAccessPort experimentAccessPort;
@@ -42,6 +40,7 @@ public class ModelVersionService {
     private final RegistryVersionCounterRepository counterRepository;
     private final ModelVersionMapper mapper;
 
+<<<<<<< HEAD
     public ModelVersionService(ProjectAccessPort projectAccessPort, ExperimentAccessPort experimentAccessPort,
                                ArtifactLookupPort artifactLookupPort, ModelVersionRepository repository,
                                RegistryVersionCounterRepository counterRepository,
@@ -55,6 +54,8 @@ public class ModelVersionService {
     }
 
     /** The counter advance and the version insert commit or roll back together. */
+=======
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     @Transactional
     public ModelVersionResponse register(UUID projectId, RegisterModelVersionRequest request) {
         projectAccessPort.requireMember(projectId, request.userId());
@@ -72,6 +73,7 @@ public class ModelVersionService {
         if (repository.existsByArtifactId(request.artifactId())) {
             throw new ModelArtifactAlreadyRegisteredException(request.artifactId());
         }
+<<<<<<< HEAD
         long version = allocateVersion(projectId);
         try {
             return mapper.toResponse(repository.saveAndFlush(
@@ -82,6 +84,10 @@ public class ModelVersionService {
             }
             throw e;
         }
+=======
+        return mapper.toResponse(repository.saveAndFlush(
+                new ModelVersion(projectId, request.artifactId(), version)));
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
     }
 
     public ModelVersionResponse getById(UUID projectId, UUID versionId) {
@@ -104,17 +110,29 @@ public class ModelVersionService {
     @Transactional
     public ModelVersionResponse stage(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
+<<<<<<< HEAD
         ModelVersion version = findVersion(projectId, versionId);
+=======
+        ModelVersion version = requireVersion(projectId, versionId);
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
         version.stage();
         repository.flush();
         return mapper.toResponse(version);
     }
 
+<<<<<<< HEAD
     /** Archiving the old production version and promoting the target are one atomic transaction. */
     @Transactional
     public ModelVersionResponse promoteToProduction(UUID projectId, UUID versionId, UUID userId) {
         projectAccessPort.requireMember(projectId, userId);
         ModelVersion target = findVersion(projectId, versionId);
+=======
+    /** Archiving the current version and promoting the target are one transaction. */
+    @Transactional
+    public ModelVersionResponse promoteToProduction(UUID projectId, UUID versionId, UUID userId) {
+        projectAccessPort.requireMember(projectId, userId);
+        ModelVersion target = requireVersion(projectId, versionId);
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
         if (target.getState() != ModelVersionState.STAGING) {
             throw new InvalidModelVersionTransitionException(
                     versionId, target.getState(), ModelVersionState.PRODUCTION);
@@ -131,6 +149,7 @@ public class ModelVersionService {
         return mapper.toResponse(target);
     }
 
+<<<<<<< HEAD
     private long allocateVersion(UUID projectId) {
         RegistryVersionCounter counter = counterRepository.findById(projectId)
                 .orElseGet(() -> new RegistryVersionCounter(projectId));
@@ -140,17 +159,10 @@ public class ModelVersionService {
     }
 
     private ModelVersion findVersion(UUID projectId, UUID versionId) {
+=======
+    private ModelVersion requireVersion(UUID projectId, UUID versionId) {
+>>>>>>> 777bf4594fd0306c9029215022fb36840cd757b1
         return repository.findByIdAndProjectId(versionId, projectId)
                 .orElseThrow(() -> new ModelVersionNotFoundException(versionId));
-    }
-
-    private static boolean hasConstraint(Throwable error, String constraintName) {
-        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
-            if (cause instanceof ConstraintViolationException violation
-                    && constraintName.equals(violation.getConstraintName())) {
-                return true;
-            }
-        }
-        return false;
     }
 }
