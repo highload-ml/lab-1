@@ -5,3 +5,5 @@ build
 *.iml
 .env
 .DS_Store
+# built by frontend/Dockerfile with its own context
+frontend
