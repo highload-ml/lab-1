@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.itmo.highload_ml.project.api.dto.AddMemberRequest;
 import ru.itmo.highload_ml.project.api.dto.MemberResponse;
 import ru.itmo.highload_ml.project.api.dto.UpdateMemberRoleRequest;
+import ru.itmo.highload_ml.project.api.dto.UserProjectResponse;
 import ru.itmo.highload_ml.project.exception.LastOwnerRemovalException;
 import ru.itmo.highload_ml.project.exception.MembershipAlreadyExistsException;
 import ru.itmo.highload_ml.project.exception.MembershipNotFoundException;
@@ -57,6 +58,16 @@ public class ProjectMembershipService {
 
     public MemberResponse getMember(UUID projectId, UUID userId) {
         return projectMapper.toMemberResponse(findMembership(projectId, userId));
+    }
+
+    /**
+     * Projects the user belongs to in any role, including the ones they created (OWNER).
+     */
+    public Page<UserProjectResponse> findProjectsOfUser(UUID userId, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
+        return membershipRepository.findByIdUserId(userId, pageable).map(projectMapper::toUserProjectResponse);
     }
 
     public Page<MemberResponse> findMembers(UUID projectId, Pageable pageable) {

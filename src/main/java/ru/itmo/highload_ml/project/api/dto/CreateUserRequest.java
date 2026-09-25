@@ -14,8 +14,8 @@ public record CreateUserRequest(
         @Pattern(regexp = UserValidation.NICKNAME_PATTERN, message = UserValidation.NICKNAME_MESSAGE)
         String nickname,
 
-        @Schema(example = "s3cure-Passw0rd", accessMode = Schema.AccessMode.WRITE_ONLY)
-        @NotBlank
+        @Schema(example = "s3cure-Passw0rd", accessMode = Schema.AccessMode.WRITE_ONLY,
+                description = "Optional: users can register by nickname only")
         @Size(min = 8, max = 72)
         String password,
 

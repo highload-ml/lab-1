@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ru.itmo.highload_ml.project.api.dto.CreateUserRequest;
 import ru.itmo.highload_ml.project.api.dto.UpdateUserRequest;
+import ru.itmo.highload_ml.project.api.dto.UserProjectResponse;
 import ru.itmo.highload_ml.project.api.dto.UserResponse;
+import ru.itmo.highload_ml.project.service.ProjectMembershipService;
 import ru.itmo.highload_ml.project.service.UserService;
 
 import java.net.URI;
@@ -39,6 +41,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final ProjectMembershipService membershipService;
     private final Pagination pagination;
 
     @PostMapping
@@ -67,6 +70,38 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     public UserResponse getById(@PathVariable UUID id) {
         return userService.getById(id);
+    }
+
+    @GetMapping("/by-nickname/{nickname}")
+    @Operation(summary = "Find user by nickname",
+            description = "Used by the web client to sign in by nickname. This identifies the user, it does not authenticate.")
+    @ApiResponse(responseCode = "200", description = "User found")
+    @ApiResponse(responseCode = "404", description = "No user with this nickname",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    public UserResponse getByNickname(@PathVariable String nickname) {
+        return userService.getByNickname(nickname);
+    }
+
+    @GetMapping("/{id}/projects")
+    @Operation(summary = "List projects of a user",
+            description = "Projects the user belongs to in any role, newest membership first. "
+                    + "Classic pagination with the X-Total-Count header, page size capped at 50.")
+    @ApiResponse(responseCode = "200", description = "Page of the user's projects with the user's role in each",
+            headers = @Header(name = Pagination.TOTAL_COUNT_HEADER, description = "Total number of the user's projects",
+                    schema = @Schema(type = "integer")))
+    @ApiResponse(responseCode = "400", description = "Invalid pagination parameters or malformed id",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "404", description = "User not found",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    public ResponseEntity<List<UserProjectResponse>> findProjects(
+            @PathVariable UUID id,
+            @Parameter(description = "Zero-based page index")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @Parameter(description = "Page size, values above the limit are reduced to it")
+            @RequestParam(defaultValue = "20") @Min(1) int size
+    ) {
+        return Pagination.withTotalCount(membershipService.findProjectsOfUser(id,
+                pagination.pageRequest(page, size, Sort.by(Sort.Order.desc("joinedAt"), Sort.Order.asc("id.projectId")))));
     }
 
     @GetMapping

@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import ru.itmo.highload_ml.project.api.dto.AddMemberRequest;
 import ru.itmo.highload_ml.project.api.dto.MemberResponse;
 import ru.itmo.highload_ml.project.api.dto.UpdateMemberRoleRequest;
+import ru.itmo.highload_ml.project.api.dto.UserProjectResponse;
 import ru.itmo.highload_ml.project.exception.LastOwnerRemovalException;
 import ru.itmo.highload_ml.project.exception.MembershipAlreadyExistsException;
 import ru.itmo.highload_ml.project.exception.MembershipNotFoundException;
@@ -62,6 +63,34 @@ class ProjectMembershipServiceTest {
 
     private final Project project = project("fraud");
     private final User alice = user("alice");
+
+    @Test
+    void findProjectsOfUserReturnsProjectsWithTheUsersRole() {
+        User alice = user("alice");
+        Project fraud = project("fraud");
+        Pageable pageable = PageRequest.of(0, 20);
+        when(userRepository.existsById(alice.getId())).thenReturn(true);
+        when(membershipRepository.findByIdUserId(alice.getId(), pageable))
+                .thenReturn(new PageImpl<>(List.of(membership(fraud, alice, ProjectRole.EDITOR)), pageable, 1));
+
+        List<UserProjectResponse> projects = membershipService.findProjectsOfUser(alice.getId(), pageable).getContent();
+
+        assertThat(projects).singleElement().satisfies(project -> {
+            assertThat(project.projectId()).isEqualTo(fraud.getId());
+            assertThat(project.name()).isEqualTo("fraud");
+            assertThat(project.role()).isEqualTo(ProjectRole.EDITOR);
+        });
+    }
+
+    @Test
+    void findProjectsOfUnknownUserThrowsNotFound() {
+        UUID userId = UUID.randomUUID();
+        when(userRepository.existsById(userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> membershipService.findProjectsOfUser(userId, PageRequest.of(0, 20)))
+                .isInstanceOf(UserNotFoundException.class);
+        verify(membershipRepository, never()).findByIdUserId(any(), any());
+    }
 
     @Test
     void addMemberCreatesMembership() {

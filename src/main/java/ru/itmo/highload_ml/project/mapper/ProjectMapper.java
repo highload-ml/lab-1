@@ -3,6 +3,7 @@ package ru.itmo.highload_ml.project.mapper;
 import org.springframework.stereotype.Component;
 import ru.itmo.highload_ml.project.api.dto.MemberResponse;
 import ru.itmo.highload_ml.project.api.dto.ProjectResponse;
+import ru.itmo.highload_ml.project.api.dto.UserProjectResponse;
 import ru.itmo.highload_ml.project.model.Project;
 import ru.itmo.highload_ml.project.model.ProjectMembership;
 
@@ -11,6 +12,18 @@ public class ProjectMapper {
 
     public ProjectResponse toResponse(Project project) {
         return new ProjectResponse(project.getId(), project.getName(), project.getDescription(), project.getCreatedAt());
+    }
+
+    public UserProjectResponse toUserProjectResponse(ProjectMembership membership) {
+        Project project = membership.getProject();
+        return new UserProjectResponse(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                project.getCreatedAt(),
+                membership.getRole(),
+                membership.getJoinedAt()
+        );
     }
 
     public MemberResponse toMemberResponse(ProjectMembership membership) {
